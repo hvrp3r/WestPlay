@@ -7,7 +7,17 @@
  * light look, on WestPlay's dark card in the dark look).
  */
 export type AppIconRole =
-  'maps' | 'music' | 'spotify' | 'podcasts' | 'messages' | 'phone' | 'settings' | 'weather' | 'youtube' | 'youtubeMusic'
+  | 'maps'
+  | 'music'
+  | 'spotify'
+  | 'podcasts'
+  | 'messages'
+  | 'phone'
+  | 'settings'
+  | 'weather'
+  | 'youtube'
+  | 'youtubeMusic'
+  | 'tiktok'
 
 /** Each role's files' name. */
 const FILES: Record<AppIconRole, string> = {
@@ -21,6 +31,7 @@ const FILES: Record<AppIconRole, string> = {
   weather: 'weather',
   youtube: 'youtube',
   youtubeMusic: 'youtube-music',
+  tiktok: 'tiktok',
 }
 
 /** WestPlay's own icon for `role`, for a light or a dark screen. */

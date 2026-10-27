@@ -30,6 +30,7 @@ mod signin;
 pub mod speakers;
 mod spotify;
 pub mod startup;
+mod tiktok;
 mod typing;
 mod weather;
 mod webview;
@@ -107,6 +108,10 @@ pub struct Status {
     /// window open.
     pub apple_music_signed_in: Option<bool>,
     pub apple_music_signing_in: bool,
+    /// The same of WestPlay's TikTok: signed in or not (`None`: not known, TikTok not run yet), its sign-in
+    /// under way.
+    pub tiktok_signed_in: Option<bool>,
+    pub tiktok_signing_in: bool,
     /// The map of the profile played: ready, being built, waiting for the game to close...
     pub map: maps::MapStatus,
     /// The map the cab shows: its folder in WestPlay's maps, and when it was built (the companion's
@@ -125,6 +130,7 @@ pub struct AccountRequests {
     pub youtube: AccountRequest,
     pub spotify: AccountRequest,
     pub apple_music: AccountRequest,
+    pub tiktok: AccountRequest,
 }
 
 /// One service's request, the latest not carried out yet.
@@ -393,6 +399,11 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut youtube_music_state: Option<youtube_music::State> = None;
     let (mut youtube_music_window_open, mut youtube_music_confirming) = (false, false);
     let mut youtube_music_playback: Option<String> = None;
+    // WestPlay's TikTok, the same way (on a WebView2 profile of its own): what it last said, and whether its
+    // sign-in is under way.
+    let mut tiktok: Option<tiktok::TikTok> = None;
+    let mut tiktok_state: Option<tiktok::State> = None;
+    let (mut tiktok_window_open, mut tiktok_confirming) = (false, false);
     // The settings generation last applied (`None`: apply them once at startup).
     let mut applied_settings = None;
     // Each keybind's presses the page was told of (`PluginBlock::keybind_presses`).
@@ -476,6 +487,15 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 AccountAction::SignOut => spotify::Command::SignOut,
                 AccountAction::Check => spotify::Command::Start,
             });
+        }
+        if let Some(action) = config.accounts.tiktok.take()
+            && let Some(player) = start_tiktok(&mut tiktok, &stage, &config)
+        {
+            match action {
+                AccountAction::SignIn => drop(player.command(&tiktok::Command::SignIn)),
+                AccountAction::SignOut => drop(player.command(&tiktok::Command::SignOut)),
+                AccountAction::Check => {}
+            }
         }
         if let Some(action) = config.accounts.apple_music.take()
             && let Some(player) = start_apple_music(&mut apple_music, &stage, &config)
@@ -768,6 +788,10 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                             let _ = webview.post_json(playback);
                         }
                     }
+                    if tiktok.is_some() {
+                        let signing_in = tiktok_window_open || tiktok_confirming;
+                        let _ = webview.post_json(&tiktok::state_message(tiktok_state.as_ref(), signing_in));
+                    }
                     let _ = webview.post_json(&settings_message(&config.settings.get()));
                     if let Some(message) = &customize_message {
                         let _ = webview.post_json(message);
@@ -857,6 +881,20 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                         {
                             let _ = youtube.reload();
                         }
+                    }
+                }
+                Some(PageMessage::Tiktok { command }) => {
+                    if command == tiktok::Command::Close {
+                        if let Some(closing) = tiktok.take() {
+                            closing.close(&stage);
+                        }
+                        tiktok_state = None;
+                        (tiktok_window_open, tiktok_confirming) = (false, false);
+                        let _ = webview.post_json(&tiktok::state_message(None, false));
+                    } else if tiktok.is_none() && matches!(command, tiktok::Command::Hide | tiktok::Command::Pause) {
+                        // Nothing to hide or pause: TikTok isn't running.
+                    } else if let Some(player) = start_tiktok(&mut tiktok, &stage, &config) {
+                        let _ = player.command(&command);
                     }
                 }
                 Some(PageMessage::Typing { selection }) => {
@@ -1367,6 +1405,63 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
             }
         }
 
+        // What TikTok's page says, and its sign-in window, for the page; its WebView failing closes it.
+        if let Some(player) = &tiktok {
+            if player.failed() || players_closing {
+                if players_closing {
+                    log!("[tiktok] closed with the game");
+                } else {
+                    log!("[tiktok] its browser failed: closed, the page opens it again");
+                }
+                if let Some(failed) = tiktok.take() {
+                    failed.close(&stage);
+                }
+                tiktok_state = None;
+                (tiktok_window_open, tiktok_confirming) = (false, false);
+                status.tiktok_signed_in = None;
+                status.tiktok_signing_in = false;
+                (config.on_status)(&status);
+                let _ = webview.post_json(&tiktok::state_message(None, false));
+            } else {
+                let mut changed = false;
+                for report in player.take_reports() {
+                    match report {
+                        tiktok::Report::Spectrum(bars) => {
+                            let _ = webview.post_json(&speakers::spectrum_message(&bars));
+                        }
+                        tiktok::Report::State(state) => {
+                            if tiktok_state.as_ref().map(|s| (s.signed_in, s.loaded))
+                                != Some((state.signed_in, state.loaded))
+                            {
+                                log!("[tiktok] loaded: {}, signed in: {}", state.loaded, state.signed_in);
+                            }
+                            tiktok_state = Some(*state);
+                            changed = true;
+                        }
+                        tiktok::Report::SignInWindow(open) => {
+                            tiktok_window_open = open;
+                            changed = true;
+                        }
+                        tiktok::Report::Confirming(confirming) => {
+                            tiktok_confirming = confirming;
+                            changed = true;
+                        }
+                    }
+                }
+                if changed {
+                    let signing_in = tiktok_window_open || tiktok_confirming;
+                    let _ = webview.post_json(&tiktok::state_message(tiktok_state.as_ref(), signing_in));
+                    // The companion hears whether it's signed in, and nothing more of the account.
+                    let signed_in = tiktok_state.as_ref().filter(|state| state.loaded).map(|state| state.signed_in);
+                    let signed_in = signed_in.or(status.tiktok_signed_in);
+                    if (status.tiktok_signed_in, status.tiktok_signing_in) != (signed_in, signing_in) {
+                        (status.tiktok_signed_in, status.tiktok_signing_in) = (signed_in, signing_in);
+                        (config.on_status)(&status);
+                    }
+                }
+            }
+        }
+
         // What the player typed on their own keyboard, and whether it types (the plugin decides: the truck
         // standing still, a field selected then).
         let typing_block = &bridge.bridge().typing;
@@ -1426,6 +1521,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
             }
             if let Some(player) = &spotify {
+                let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
+            }
+            if let Some(player) = &tiktok {
                 let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
             }
         }
@@ -1823,6 +1921,26 @@ fn start_youtube_music<'a>(
     youtube_music.as_ref()
 }
 
+/// WestPlay's TikTok, started as the page first shows it (on a WebView2 profile of its own: signing out of
+/// TikTok forgets nothing else), or `None` if it couldn't start.
+fn start_tiktok<'a>(
+    tiktok: &'a mut Option<tiktok::TikTok>,
+    stage: &Stage,
+    config: &Config,
+) -> Option<&'a tiktok::TikTok> {
+    if tiktok.is_none() {
+        let user_data = config.data_dir.join("webview2-tiktok");
+        match tiktok::TikTok::start(stage, config.width, config.height, &user_data) {
+            Ok(started) => {
+                log!("[tiktok] opened");
+                *tiktok = Some(started)
+            }
+            Err(e) => startup::mark(&format!("host: TikTok couldn't start: {e}")),
+        }
+    }
+    tiktok.as_ref()
+}
+
 /// Spotify's web player, started as the page first shows it (on a WebView2 profile of its own: signing out
 /// of Spotify forgets nothing else), or `None` if it couldn't start.
 fn start_spotify<'a>(
@@ -1934,6 +2052,8 @@ enum PageMessage {
     AppleMusic { command: apple_music::Command },
     /// A command for YouTube Music's web player (`youtubeMusic`): its sign-in, a question, its controls.
     YoutubeMusic { command: youtube_music::Command },
+    /// A command for WestPlay's TikTok (`tiktok`): its sign-in, its controls, where it shows.
+    Tiktok { command: tiktok::Command },
     /// The text field selected on the page, a number that changes with every selection (0: none), for the
     /// player's own keyboard to type into (`typing`).
     Typing { selection: u32 },

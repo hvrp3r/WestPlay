@@ -86,6 +86,7 @@ const accounts = {
   youtube: true as boolean | null,
   spotify: false as boolean | null,
   appleMusic: false as boolean | null,
+  tiktok: false as boolean | null,
   signingIn: '',
 }
 
@@ -134,6 +135,8 @@ function status(): HostStatus {
     spotifySigningIn: accounts.signingIn === 'spotify',
     appleMusicSignedIn: accounts.appleMusic,
     appleMusicSigningIn: accounts.signingIn === 'appleMusic',
+    tiktokSignedIn: accounts.tiktok,
+    tiktokSigningIn: accounts.signingIn === 'tiktok',
     map,
     mapFolder: null,
     mapBuilt: map.state === 'ready' ? Math.floor(Date.now() / 1000) - 3 * 86_400 : null,
@@ -184,7 +187,7 @@ function setLook(change: Partial<Settings['look']>) {
 const later = <T>(value: T, ms = 300) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms))
 
 /** A sign-in: Google's, Spotify's or Apple's window "open" a moment, then signed in. */
-function signIn(service: 'youtube' | 'spotify' | 'appleMusic') {
+function signIn(service: 'youtube' | 'spotify' | 'appleMusic' | 'tiktok') {
   accounts.signingIn = service
   emit('host-status', status())
   setTimeout(() => {
@@ -297,6 +300,7 @@ export function answer(command: string, args?: Record<string, unknown>): Promise
     case 'youtube_check':
     case 'spotify_check':
     case 'apple_music_check':
+    case 'tiktok_check':
       return later(undefined)
     case 'youtube_sign_in':
       signIn('youtube')
@@ -306,6 +310,9 @@ export function answer(command: string, args?: Record<string, unknown>): Promise
       return later(undefined)
     case 'apple_music_sign_in':
       signIn('appleMusic')
+      return later(undefined)
+    case 'tiktok_sign_in':
+      signIn('tiktok')
       return later(undefined)
     case 'open_support_page':
       window.open('https://kreosus.com/enes-less', '_blank', 'noopener')
@@ -327,6 +334,12 @@ export function answer(command: string, args?: Record<string, unknown>): Promise
     case 'apple_music_sign_out':
       setTimeout(() => {
         accounts.appleMusic = false
+        emit('host-status', status())
+      }, 1200)
+      return later(undefined)
+    case 'tiktok_sign_out':
+      setTimeout(() => {
+        accounts.tiktok = false
         emit('host-status', status())
       }, 1200)
       return later(undefined)
