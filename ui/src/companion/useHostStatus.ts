@@ -30,6 +30,9 @@ export interface HostStatus {
   /** The same of Apple Music: signed in or not (`null`: not known yet), and Apple's sign-in window open. */
   appleMusicSignedIn: boolean | null
   appleMusicSigningIn: boolean
+  /** The same of WestPlay's X. */
+  xSignedIn: boolean | null
+  xSigningIn: boolean
   /** The map of the profile played (mirrors `westplay_host::maps::MapStatus`). */
   map: MapStatus
   /** The map the cab shows: its folder in WestPlay's maps, and when it was built (seconds since 1970;
@@ -144,6 +147,20 @@ export function appLogPlace(): Promise<string | null> {
 /** Runs Apple Music's web player (hidden), so the status says whether it's signed in. */
 export function appleMusicCheck(): Promise<void> {
   return call('apple_music_check')
+}
+
+/** WestPlay's X: its sign-in in a window on the desktop, its sign-out, and finding out whether it's signed in
+ * (its page run hidden). */
+export function xSignIn(): Promise<void> {
+  return call('x_sign_in')
+}
+
+export function xSignOut(): Promise<void> {
+  return call('x_sign_out')
+}
+
+export function xCheck(): Promise<void> {
+  return call('x_check')
 }
 
 /** Opens or closes WestPlay on the truck's screen (the status then reports it, once the cabin has). */

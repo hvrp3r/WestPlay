@@ -8,6 +8,7 @@ import { isCopied, noteOpened, openedBefore, saveCopy, savedCopy } from './launc
 import { MusicApp } from './music/MusicApp'
 import { SettingsApp } from './settings/SettingsApp'
 import { SpotifyApp } from './spotify/SpotifyApp'
+import { XApp } from './x/XApp'
 import { YouTubeMusicApp } from './youtubeMusic/YouTubeMusicApp'
 import { WeatherApp } from './weather/WeatherApp'
 import { YouTubeApp } from './youtube/YouTubeApp'
@@ -83,6 +84,8 @@ function AppContent({ app }: { app: AppId }) {
       return <SpotifyApp />
     case 'youtubeMusic':
       return <YouTubeMusicApp />
+    case 'x':
+      return <XApp />
     case 'settings':
       return <SettingsApp />
     case 'weather':

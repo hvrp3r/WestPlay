@@ -1,0 +1,483 @@
+/* WestPlay's X (XApp.tsx), in X's dark look. Buttons are set under the app's own classes: the shell's reset of
+   every button (.shell button) is as strong as one class. */
+.x-app {
+  --x-blue: #1d9bf0;
+  --x-line: #2f3336;
+  --x-dim: #71767b;
+  background: #000;
+  color: #e7e9ea;
+  height: 100%;
+  display: flex;
+}
+
+.x-message {
+  margin: auto;
+  max-width: 520px;
+  padding: 24px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--x-dim);
+}
+
+.x-message h2 {
+  margin: 16px 0 8px;
+  font-size: 30px;
+  color: #e7e9ea;
+}
+
+.x-mark {
+  width: 96px;
+  height: 96px;
+}
+
+.x-app .x-button {
+  margin-top: 12px;
+  padding: 14px 36px;
+  border-radius: 999px;
+  background: #e7e9ea;
+  color: #0f1419;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.x-waiting {
+  color: var(--x-blue);
+}
+
+.x-feed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.x-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--x-line);
+}
+
+.x-tabs {
+  display: flex;
+}
+
+.x-app .x-tab {
+  padding: 18px 22px 14px;
+  font-size: 23px;
+  font-weight: 600;
+  color: var(--x-dim);
+  border-bottom: 4px solid transparent;
+}
+
+.x-app .x-tab.on {
+  color: #e7e9ea;
+  font-weight: 700;
+  border-bottom-color: var(--x-blue);
+}
+
+.x-bar-end {
+  display: flex;
+  gap: 20px;
+}
+
+.x-app .x-link {
+  color: var(--x-dim);
+  font-size: 19px;
+}
+
+.x-posts {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.x-post {
+  display: flex;
+  gap: 14px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--x-line);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.x-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* A post the next one answers: a line from its picture down to the next's. */
+.x-thread-line {
+  flex: 1;
+  width: 3px;
+  margin-top: 6px;
+  margin-bottom: -22px;
+  border-radius: 2px;
+  background: var(--x-line);
+}
+
+.x-post.answered {
+  border-bottom: none;
+}
+
+.x-post.opens {
+  cursor: pointer;
+}
+
+.x-post.focal .x-text {
+  font-size: 29px;
+}
+
+.x-reply-to {
+  font-size: 18px;
+  color: var(--x-blue);
+}
+
+.x-answers {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 24px 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--x-dim);
+}
+
+.x-thread-bar {
+  justify-content: flex-start;
+  padding: 10px 24px;
+}
+
+.x-thread-bar h2 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.x-app .x-back {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #e7e9ea;
+}
+
+.x-back svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.x-avatar {
+  width: 60px;
+  height: 60px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #16181c;
+}
+
+.x-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.x-context {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--x-dim);
+}
+
+.x-who {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.x-name {
+  font-size: 23px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.x-handle {
+  font-size: 20px;
+  color: var(--x-dim);
+}
+
+.x-text {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.x-media {
+  margin-top: 6px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+}
+
+.x-images {
+  display: grid;
+  gap: 2px;
+  max-height: 380px;
+}
+
+.x-images-2,
+.x-images-4 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.x-images-3 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.x-images-3 img:first-child {
+  grid-row: span 2;
+}
+
+.x-images img {
+  width: 100%;
+  height: 100%;
+  max-height: 380px;
+  object-fit: cover;
+  display: block;
+}
+
+.x-app .x-video {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 200px;
+  max-height: 400px;
+  background: #16181c;
+}
+
+.x-video img {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+.x-video svg {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  padding: 14px;
+  border-radius: 50%;
+  background: var(--x-blue);
+  fill: #fff;
+}
+
+.x-counts {
+  display: flex;
+  gap: 56px;
+  margin-top: 6px;
+  color: var(--x-dim);
+  font-size: 20px;
+}
+
+.x-counts > span,
+.x-app .x-like {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--x-dim);
+}
+
+.x-counts svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.x-app .x-like.on {
+  color: #f91880;
+}
+
+.x-like.on svg {
+  fill: #f91880;
+}
+
+.x-foot {
+  height: 40px;
+}
+
+.x-hole {
+  flex: 1;
+}
+
+/* A post's video: its controls over it. */
+.x-stream {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: #e7e9ea;
+}
+
+.x-stream .x-video-press {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.x-play {
+  width: 96px;
+  height: 96px;
+  fill: rgb(255 255 255 / 0.85);
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 0.5));
+}
+
+.x-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px 28px;
+  background: linear-gradient(rgb(0 0 0 / 0.75), transparent);
+}
+
+.x-top-texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.x-top-text {
+  font-size: 19px;
+  color: rgb(231 233 234 / 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.x-stream .x-round {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+}
+
+.x-round svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.x-volume {
+  position: absolute;
+  right: 20px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.x-volume input[type='range'] {
+  appearance: none;
+  width: 160px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #fff var(--level), rgb(255 255 255 / 0.25) var(--level));
+  cursor: pointer;
+}
+
+.x-volume input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+
+/* The post a post quotes: a box inside it. */
+.x-app .x-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--x-line);
+  border-radius: 16px;
+  text-align: left;
+  color: #e7e9ea;
+  width: 100%;
+}
+
+.x-quote .x-name {
+  font-size: 20px;
+}
+
+.x-quote .x-handle {
+  font-size: 18px;
+}
+
+.x-quote-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  align-self: center;
+}
+
+.x-quote-text {
+  font-size: 21px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.x-quote .x-images {
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 260px;
+}
+
+.x-quote .x-images img {
+  max-height: 260px;
+}

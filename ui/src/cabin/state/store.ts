@@ -27,6 +27,7 @@ import {
   receivePlayback,
   receiveState as receiveSpotifyState,
 } from '../apps/spotify/spotify'
+import { receiveX, receiveXThread, receiveXTimeline } from '../apps/x/x'
 import { receiveAnswer, receiveState, useYouTube } from '../apps/youtube/youtube'
 import {
   receiveAnswer as receiveYouTubeMusicAnswer,
@@ -516,6 +517,18 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         break
       case 'youtubeSignIn':
         useYouTube.setState({ signingIn: message.open })
+        break
+        break
+        break
+        break
+      case 'twitter':
+        receiveX(message.state, message.signingIn)
+        break
+      case 'twitterFeed':
+        receiveXTimeline(message.which, message.posts)
+        break
+      case 'twitterThread':
+        receiveXThread(message.id, message.posts)
         break
       case 'map':
         receiveMapFolder(message.folder, message.built)

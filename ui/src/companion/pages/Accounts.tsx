@@ -11,6 +11,8 @@ import {
   appleMusicSignOut,
   spotifySignIn,
   spotifySignOut,
+  xSignIn,
+  xSignOut,
   youtubeSignIn,
   youtubeSignOut,
 } from '../useHostStatus'
@@ -57,9 +59,28 @@ const SERVICES: Record<
     signingIn: (status) => status?.appleMusicSigningIn ?? false,
     words: (words) => words.appleMusic,
   },
+  // WestPlay's: its words in French or English only (the onboarding's other languages don't have it).
+  x: {
+    name: 'X',
+    app: 'x',
+    glow: GLOW.x,
+    signIn: xSignIn,
+    signOut: xSignOut,
+    signingIn: (status) => status?.xSigningIn ?? false,
+    words: (words) =>
+      words.locale.startsWith('fr')
+        ? {
+            finishInWindow: 'Terminez la connexion dans la fenêtre X',
+            signingIn: { title: 'Connexion à X', text: 'Continuez dans la fenêtre X' },
+          }
+        : {
+            finishInWindow: 'Finish signing in in the X window',
+            signingIn: { title: 'Signing in to X', text: 'Continue in the X window' },
+          },
+  },
 }
 
-const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic']
+const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic', 'x']
 
 /**
  * The services WestPlay plays from, each signed in (in its own window, on the desktop) or not. WestPlay only

@@ -7,6 +7,7 @@ import { RETURN_BUTTON_SIZE, returnButtonCentre } from '../state/screen'
 import { textScale } from '../state/textSize'
 import { Player } from '../apps/youtube/Player'
 import { type Hole, useYouTube } from '../apps/youtube/youtube'
+import { useX } from '../apps/x/x'
 import { useYouTubeMusic } from '../apps/youtubeMusic/youtubeMusic'
 import { Keyboard } from '../keyboard/Keyboard'
 import { useCabin, useLive } from '../state/store'
@@ -76,7 +77,9 @@ export function Shell({ children, overlay, entering = false }: ShellProps) {
   // YouTube Music's music video in its Now Playing, the same way.
   const youtubeHole = useYouTube((state) => state.hole)
   const musicHole = useYouTubeMusic((state) => state.hole)
-  const hole = youtubeHole ?? musicHole
+  // WestPlay's X, a post's video through its app.
+  const xHole = useX((state) => state.hole)
+  const hole = youtubeHole ?? musicHole ?? xHole
   // Over a video full screen, pointing at the left edge brings the sidebar back (shell/sidebarPeek.ts).
   const carplay = useRef<HTMLDivElement>(null)
   const peek = useSidebarPeek(watching, carplay)

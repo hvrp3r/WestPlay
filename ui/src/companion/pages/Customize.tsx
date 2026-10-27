@@ -37,6 +37,7 @@ const ICON_FILES: [AppIconRole, string][] = [
   ['weather', 'weather'],
   ['youtube', 'youtube'],
   ['youtubeMusic', 'youtube-music'],
+  ['x', 'x'],
 ]
 
 /**

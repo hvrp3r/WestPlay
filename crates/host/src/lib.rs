@@ -30,6 +30,7 @@ mod signin;
 pub mod speakers;
 mod spotify;
 pub mod startup;
+mod twitter;
 mod typing;
 mod weather;
 mod webview;
@@ -107,6 +108,9 @@ pub struct Status {
     /// window open.
     pub apple_music_signed_in: Option<bool>,
     pub apple_music_signing_in: bool,
+    /// The same of WestPlay's X.
+    pub x_signed_in: Option<bool>,
+    pub x_signing_in: bool,
     /// The map of the profile played: ready, being built, waiting for the game to close...
     pub map: maps::MapStatus,
     /// The map the cab shows: its folder in WestPlay's maps, and when it was built (the companion's
@@ -125,6 +129,7 @@ pub struct AccountRequests {
     pub youtube: AccountRequest,
     pub spotify: AccountRequest,
     pub apple_music: AccountRequest,
+    pub x: AccountRequest,
 }
 
 /// One service's request, the latest not carried out yet.
@@ -393,6 +398,11 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut youtube_music_state: Option<youtube_music::State> = None;
     let (mut youtube_music_window_open, mut youtube_music_confirming) = (false, false);
     let mut youtube_music_playback: Option<String> = None;
+    // WestPlay's X, the same way, and the timeline it last told (sent again to a reloaded page).
+    let mut x: Option<twitter::Twitter> = None;
+    let mut x_state: Option<twitter::State> = None;
+    let mut x_timeline: Option<String> = None;
+    let (mut x_window_open, mut x_confirming) = (false, false);
     // The settings generation last applied (`None`: apply them once at startup).
     let mut applied_settings = None;
     // Each keybind's presses the page was told of (`PluginBlock::keybind_presses`).
@@ -476,6 +486,15 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 AccountAction::SignOut => spotify::Command::SignOut,
                 AccountAction::Check => spotify::Command::Start,
             });
+        }
+        if let Some(action) = config.accounts.x.take()
+            && let Some(player) = start_x(&mut x, &stage, &config)
+        {
+            match action {
+                AccountAction::SignIn => drop(player.command(&twitter::Command::SignIn)),
+                AccountAction::SignOut => drop(player.command(&twitter::Command::SignOut)),
+                AccountAction::Check => {}
+            }
         }
         if let Some(action) = config.accounts.apple_music.take()
             && let Some(player) = start_apple_music(&mut apple_music, &stage, &config)
@@ -768,6 +787,13 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                             let _ = webview.post_json(playback);
                         }
                     }
+                    if x.is_some() {
+                        let signing_in = x_window_open || x_confirming;
+                        let _ = webview.post_json(&twitter::state_message(x_state.as_ref(), signing_in));
+                        if let Some(timeline) = &x_timeline {
+                            let _ = webview.post_json(timeline);
+                        }
+                    }
                     let _ = webview.post_json(&settings_message(&config.settings.get()));
                     if let Some(message) = &customize_message {
                         let _ = webview.post_json(message);
@@ -857,6 +883,20 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                         {
                             let _ = youtube.reload();
                         }
+                    }
+                }
+                Some(PageMessage::Twitter { command }) => {
+                    if command == twitter::Command::Close {
+                        if let Some(closing) = x.take() {
+                            closing.close(&stage);
+                        }
+                        (x_state, x_timeline) = (None, None);
+                        (x_window_open, x_confirming) = (false, false);
+                        let _ = webview.post_json(&twitter::state_message(None, false));
+                    } else if x.is_none() && matches!(command, twitter::Command::Hide | twitter::Command::Pause) {
+                        // Nothing to hide or pause: X isn't running.
+                    } else if let Some(player) = start_x(&mut x, &stage, &config) {
+                        let _ = player.command(&command);
                     }
                 }
                 Some(PageMessage::Typing { selection }) => {
@@ -1367,6 +1407,82 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
             }
         }
 
+        // What X's page says (its timeline, a post's video), and its sign-in window, for the page; its WebView
+        // failing closes it.
+        if let Some(player) = &x {
+            if player.failed() || players_closing {
+                if players_closing {
+                    log!("[x] closed with the game");
+                } else {
+                    log!("[x] its browser failed: closed, the page opens it again");
+                }
+                if let Some(failed) = x.take() {
+                    failed.close(&stage);
+                }
+                (x_state, x_timeline) = (None, None);
+                (x_window_open, x_confirming) = (false, false);
+                status.x_signed_in = None;
+                status.x_signing_in = false;
+                (config.on_status)(&status);
+                let _ = webview.post_json(&twitter::state_message(None, false));
+            } else {
+                let mut changed = false;
+                for report in player.take_reports() {
+                    match report {
+                        twitter::Report::Spectrum(bars) => {
+                            let _ = webview.post_json(&speakers::spectrum_message(&bars));
+                        }
+                        twitter::Report::Thread(thread) => {
+                            let _ = webview.post_json(&twitter::thread_message(&thread));
+                        }
+                        twitter::Report::Timeline(timeline) => {
+                            let message = twitter::timeline_message(&timeline);
+                            if x_timeline.is_none() {
+                                log!("[x] {:?}: {} post(s) read", timeline.which, timeline.posts.len());
+                            }
+                            let _ = webview.post_json(&message);
+                            x_timeline = Some(message);
+                        }
+                        twitter::Report::State(state) => {
+                            let before = x_state.as_ref().map(|s| (s.signed_in, s.loaded, s.status.clone()));
+                            if before != Some((state.signed_in, state.loaded, state.status.clone())) {
+                                let post = state.status.as_deref().unwrap_or("-");
+                                log!(
+                                    "[x] loaded: {}, signed in: {}, post: {post}, video: {}",
+                                    state.loaded,
+                                    state.signed_in,
+                                    state.video
+                                );
+                            }
+                            if x_state.as_ref() != Some(&*state) {
+                                changed = true;
+                            }
+                            x_state = Some(*state);
+                        }
+                        twitter::Report::SignInWindow(open) => {
+                            x_window_open = open;
+                            changed = true;
+                        }
+                        twitter::Report::Confirming(confirming) => {
+                            x_confirming = confirming;
+                            changed = true;
+                        }
+                    }
+                }
+                if changed {
+                    let signing_in = x_window_open || x_confirming;
+                    let _ = webview.post_json(&twitter::state_message(x_state.as_ref(), signing_in));
+                    // The companion hears whether it's signed in, and nothing more of the account.
+                    let signed_in = x_state.as_ref().filter(|state| state.loaded).map(|state| state.signed_in);
+                    let signed_in = signed_in.or(status.x_signed_in);
+                    if (status.x_signed_in, status.x_signing_in) != (signed_in, signing_in) {
+                        (status.x_signed_in, status.x_signing_in) = (signed_in, signing_in);
+                        (config.on_status)(&status);
+                    }
+                }
+            }
+        }
+
         // What the player typed on their own keyboard, and whether it types (the plugin decides: the truck
         // standing still, a field selected then).
         let typing_block = &bridge.bridge().typing;
@@ -1426,6 +1542,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
             }
             if let Some(player) = &spotify {
+                let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
+            }
+            if let Some(player) = &x {
                 let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
             }
         }
@@ -1823,6 +1942,22 @@ fn start_youtube_music<'a>(
     youtube_music.as_ref()
 }
 
+/// WestPlay's X, started as the page first shows it (on a WebView2 profile of its own: signing out of X forgets
+/// nothing else), or `None` if it couldn't start.
+fn start_x<'a>(x: &'a mut Option<twitter::Twitter>, stage: &Stage, config: &Config) -> Option<&'a twitter::Twitter> {
+    if x.is_none() {
+        let user_data = config.data_dir.join("webview2-x");
+        match twitter::Twitter::start(stage, config.width, config.height, &user_data) {
+            Ok(started) => {
+                log!("[x] opened");
+                *x = Some(started)
+            }
+            Err(e) => startup::mark(&format!("host: X couldn't start: {e}")),
+        }
+    }
+    x.as_ref()
+}
+
 /// Spotify's web player, started as the page first shows it (on a WebView2 profile of its own: signing out
 /// of Spotify forgets nothing else), or `None` if it couldn't start.
 fn start_spotify<'a>(
@@ -1934,6 +2069,8 @@ enum PageMessage {
     AppleMusic { command: apple_music::Command },
     /// A command for YouTube Music's web player (`youtubeMusic`): its sign-in, a question, its controls.
     YoutubeMusic { command: youtube_music::Command },
+    /// A command for WestPlay's X (`twitter`): its timeline, a post's video, its sign-in, where it shows.
+    Twitter { command: twitter::Command },
     /// The text field selected on the page, a number that changes with every selection (0: none), for the
     /// player's own keyboard to type into (`typing`).
     Typing { selection: u32 },
