@@ -11,6 +11,8 @@ import {
   appleMusicSignOut,
   spotifySignIn,
   spotifySignOut,
+  twitchSignIn,
+  twitchSignOut,
   youtubeSignIn,
   youtubeSignOut,
 } from '../useHostStatus'
@@ -57,9 +59,28 @@ const SERVICES: Record<
     signingIn: (status) => status?.appleMusicSigningIn ?? false,
     words: (words) => words.appleMusic,
   },
+  // WestPlay's: its words in French or English only (the onboarding's other languages don't have it).
+  twitch: {
+    name: 'Twitch',
+    app: 'twitch',
+    glow: GLOW.twitch,
+    signIn: twitchSignIn,
+    signOut: twitchSignOut,
+    signingIn: (status) => status?.twitchSigningIn ?? false,
+    words: (words) =>
+      words.locale.startsWith('fr')
+        ? {
+            finishInWindow: 'Terminez la connexion dans la fenêtre Twitch',
+            signingIn: { title: 'Connexion à Twitch', text: 'Continuez dans la fenêtre Twitch' },
+          }
+        : {
+            finishInWindow: 'Finish signing in in the Twitch window',
+            signingIn: { title: 'Signing in to Twitch', text: 'Continue in the Twitch window' },
+          },
+  },
 }
 
-const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic']
+const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic', 'twitch']
 
 /**
  * The services WestPlay plays from, each signed in (in its own window, on the desktop) or not. WestPlay only

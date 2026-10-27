@@ -27,6 +27,7 @@ import {
   receivePlayback,
   receiveState as receiveSpotifyState,
 } from '../apps/spotify/spotify'
+import { receiveTwitch, receiveTwitchList } from '../apps/twitch/twitch'
 import { receiveAnswer, receiveState, useYouTube } from '../apps/youtube/youtube'
 import {
   receiveAnswer as receiveYouTubeMusicAnswer,
@@ -516,6 +517,16 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         break
       case 'youtubeSignIn':
         useYouTube.setState({ signingIn: message.open })
+        break
+        break
+      case 'twitch':
+        receiveTwitch(message.state, message.signingIn)
+        break
+      case 'twitchList':
+        receiveTwitchList(message.which, message.channels)
+        break
+        break
+        break
         break
       case 'map':
         receiveMapFolder(message.folder, message.built)

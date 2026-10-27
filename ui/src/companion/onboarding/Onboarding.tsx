@@ -18,6 +18,9 @@ import {
   spotifyCheck,
   spotifySignIn,
   spotifySignOut,
+  twitchCheck,
+  twitchSignIn,
+  twitchSignOut,
   youtubeCheck,
   youtubeSignIn,
   youtubeSignOut,
@@ -65,7 +68,7 @@ import {
   useTour,
 } from '../room/screen'
 import { useDemo } from '../room/useDemo'
-import { count, languageOf, list, percent, wordsFor } from './words'
+import { count, languageOf, list, percent, type Words, wordsFor } from './words'
 
 const STEPS = [
   'welcome',
@@ -77,6 +80,7 @@ const STEPS = [
   'accounts',
   'spotify',
   'appleMusic',
+  'twitch',
   'tutorial',
 ] as const
 type StepId = (typeof STEPS)[number]
@@ -91,6 +95,7 @@ const POSES: Record<StepId, Pose> = {
   accounts: 'side',
   spotify: 'side',
   appleMusic: 'side',
+  twitch: 'side',
   tutorial: 'final',
 }
 
@@ -281,6 +286,7 @@ export function Onboarding({
             {step === 'accounts' && <Accounts status={status} next={next} back={back} />}
             {step === 'spotify' && <ServiceSignIn service="spotify" status={status} next={next} back={back} />}
             {step === 'appleMusic' && <ServiceSignIn service="appleMusic" status={status} next={next} back={back} />}
+            {step === 'twitch' && <ServiceSignIn service="twitch" status={status} next={next} back={back} />}
             {step === 'tutorial' && <TutorialIntro code={code} finish={finish} back={back} />}
           </ScreenContext.Provider>
         </RoomText.Provider>
@@ -826,11 +832,38 @@ function Accounts({ status, next, back }: { status: HostStatus | null; next(): v
   )
 }
 
-/** Spotify's and Apple Music's sign-ins, as YouTube's: the service's own page in a window on the desktop, its
- * app on the screen meanwhile. Their buttons and states are YouTube's step's words; their own say what each
- * is for. */
+/** A service step's own words: what it's for, and what's said while signing in. */
+interface ServiceWords {
+  title: string
+  sub: string
+  finishInWindow: string
+  signingIn: { title: string; text: string }
+}
+
+/** The newer services' step words, in French or English only (the onboarding's other languages don't have
+ * them): `name`, and what it's for. */
+function newServiceWords(locale: string, name: string, forFr: string, forEn: string): ServiceWords {
+  return locale.startsWith('fr')
+    ? {
+        title: `Se connecter à ${name}`,
+        sub: `Facultatif. Connectez-vous pour ${forFr} sur l’écran du camion. La connexion à ${name} se fait dans une fenêtre à part, et WestPlay ne voit jamais votre compte.`,
+        finishInWindow: `Terminez la connexion dans la fenêtre ${name}`,
+        signingIn: { title: `Connexion à ${name}`, text: `Continuez dans la fenêtre ${name}` },
+      }
+    : {
+        title: `Sign in to ${name}`,
+        sub: `Optional. Sign in to ${forEn} on the truck’s screen. You sign in to ${name} in a separate window, and WestPlay never sees your account.`,
+        finishInWindow: `Finish signing in in the ${name} window`,
+        signingIn: { title: `Signing in to ${name}`, text: `Continue in the ${name} window` },
+      }
+}
+
+/** The other services' sign-ins, as YouTube's: the service's own page in a
+ * window on the desktop, its app on the screen meanwhile. Their buttons and states are YouTube's step's words;
+ * their own say what each is for. */
 const SERVICE_STEPS = {
   spotify: {
+    words: (words: Words): ServiceWords => words.spotify,
     name: 'Spotify',
     app: 'spotify',
     glow: GLOW.spotify,
@@ -841,6 +874,7 @@ const SERVICE_STEPS = {
     signOut: spotifySignOut,
   },
   appleMusic: {
+    words: (words: Words): ServiceWords => words.appleMusic,
     name: 'Apple Music',
     app: 'music',
     glow: GLOW.music,
@@ -849,6 +883,23 @@ const SERVICE_STEPS = {
     check: appleMusicCheck,
     signIn: appleMusicSignIn,
     signOut: appleMusicSignOut,
+  },
+  twitch: {
+    words: (words: Words) =>
+      newServiceWords(
+        words.locale,
+        'Twitch',
+        'regarder les streams de vos chaînes suivies',
+        'watch the streams of the channels you follow',
+      ),
+    name: 'Twitch',
+    app: 'twitch',
+    glow: GLOW.twitch,
+    signedIn: (status: HostStatus | null) => status?.twitchSignedIn,
+    signingIn: (status: HostStatus | null) => status?.twitchSigningIn ?? false,
+    check: twitchCheck,
+    signIn: twitchSignIn,
+    signOut: twitchSignOut,
   },
 } as const
 
@@ -871,7 +922,7 @@ function ServiceSignIn({
   const signOut = useSignOut(signedIn, it.signOut)
   const words = useWords()
   const w = words.accounts
-  const s = words[service]
+  const s = it.words(words)
   useScreenAt(it.app, it.glow, signingIn ? banner(s.signingIn, true) : null)
   return (
     <Panel

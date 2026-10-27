@@ -1,5 +1,5 @@
-//! Signing in to YouTube, Spotify or Apple Music: the service's own sign-in page, in a window of WestPlay's on
-//! the PC's desktop (a real keyboard, out of the game), on the WebView2 profile the service's page in WestPlay
+//! Signing in to YouTube, Spotify, Apple Music and the others: the service's own sign-in page, in a window
+//! of WestPlay's on the PC's desktop (a real keyboard, out of the game), on the WebView2 profile the service's page in WestPlay
 //! uses, so the sign-in is its too. Nothing of the account passes through WestPlay: the page is the service's,
 //! and what it keeps (its cookies) is WebView2's, as a browser's would be. WestPlay only sees where the window
 //! is: still signing in, back on the service (signed in), or closed.
@@ -48,13 +48,13 @@ use windows_numerics::Vector2;
 use crate::webview;
 
 /// A service to sign in to: its sign-in page, the window's title, and its own pages, where the sign-in comes
-/// back to once done (but for `not_yet`, a step of its own on the way, if any). A service whose sign-in stays
+/// back to once done (but for `not_yet`, its own steps on the way, if any). A service whose sign-in stays
 /// on one page has a script in it instead (`page_says`), which posts `{"signedIn":true}` once it is.
 pub struct Site {
     pub sign_in: &'static str,
     pub title: &'static str,
     pub home: &'static str,
-    pub not_yet: Option<&'static str>,
+    pub not_yet: &'static [&'static str],
     pub page_says: Option<&'static str>,
 }
 
@@ -64,7 +64,7 @@ pub const YOUTUBE: Site = Site {
     sign_in: "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2F",
     title: "Sign in to YouTube - WestPlay",
     home: "https://www.youtube.com/",
-    not_yet: Some("signin"),
+    not_yet: &["signin"],
     page_says: None,
 };
 
@@ -77,7 +77,7 @@ pub const SPOTIFY: Site = Site {
     sign_in: "https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F",
     title: "Sign in to Spotify - WestPlay",
     home: "https://open.spotify.com/",
-    not_yet: None,
+    not_yet: &[],
     page_says: None,
 };
 
@@ -86,7 +86,7 @@ pub const SPOTIFY_SIGN_UP: Site = Site {
     sign_in: "https://www.spotify.com/signup?forward_url=https%3A%2F%2Fopen.spotify.com%2F",
     title: "Sign up for Spotify - WestPlay",
     home: "https://open.spotify.com/",
-    not_yet: None,
+    not_yet: &[],
     page_says: None,
 };
 
@@ -95,9 +95,19 @@ pub const APPLE_MUSIC: Site = Site {
     sign_in: "https://music.apple.com/",
     title: "Sign in to Apple Music - WestPlay",
     home: "https://music.apple.com/",
-    not_yet: None,
+    not_yet: &[],
     page_says: Some(include_str!("apple_music_sign_in.js")),
 };
+
+/// Twitch's sign-in (WestPlay's), coming back to Twitch: its own pages until then are its sign-in and sign-up.
+pub const TWITCH: Site = Site {
+    sign_in: "https://www.twitch.tv/login",
+    title: "Sign in to Twitch - WestPlay",
+    home: "https://www.twitch.tv/",
+    not_yet: &["login", "signup", "passport"],
+    page_says: None,
+};
+
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
 const SIZE: (i32, i32) = (520, 760);
 /// Windows' message for the mouse leaving a window that asked to be told (its value, from WinUser.h).
@@ -368,7 +378,7 @@ impl SignInWindow {
 /// service's own is signed in, but for its own step on the way (YouTube's `/signin`, which sets its cookies).
 fn progress_at(site: &Site, loaded: &str) -> Progress {
     let home = loaded.strip_prefix(site.home);
-    let done = home.is_some_and(|path| site.not_yet.is_none_or(|step| !path.starts_with(step)));
+    let done = home.is_some_and(|path| !site.not_yet.iter().any(|step| path.starts_with(step)));
     if done { Progress::SignedIn } else { Progress::Signing }
 }
 
@@ -556,6 +566,14 @@ mod tests {
         // Signing up: Spotify's own pages until the new account comes back to the web player.
         assert_eq!(progress_at(&SPOTIFY_SIGN_UP, SPOTIFY_SIGN_UP.sign_in), Progress::Signing);
         assert_eq!(progress_at(&SPOTIFY_SIGN_UP, "https://open.spotify.com/"), Progress::SignedIn);
+    }
+
+    #[test]
+    fn is_signed_in_to_twitch_once_back_on_twitch() {
+        assert_eq!(progress_at(&TWITCH, TWITCH.sign_in), Progress::Signing);
+        assert_eq!(progress_at(&TWITCH, "https://www.twitch.tv/signup"), Progress::Signing);
+        assert_eq!(progress_at(&TWITCH, "https://www.twitch.tv/"), Progress::SignedIn);
+        assert_eq!(progress_at(&TWITCH, "https://evil.example/?https://www.twitch.tv/"), Progress::Signing);
     }
 
     /// Apple Music's sign-in stays on its web player: signed in only once its page says so.
