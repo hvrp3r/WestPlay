@@ -33,6 +33,9 @@ export interface HostStatus {
   /** The same of WestPlay's TikTok: signed in or not (`null`: not known yet), and its sign-in under way. */
   tiktokSignedIn: boolean | null
   tiktokSigningIn: boolean
+  /** The same of WestPlay's Twitch. */
+  twitchSignedIn: boolean | null
+  twitchSigningIn: boolean
   /** The map of the profile played (mirrors `westplay_host::maps::MapStatus`). */
   map: MapStatus
   /** The map the cab shows: its folder in WestPlay's maps, and when it was built (seconds since 1970;
@@ -161,6 +164,20 @@ export function tiktokSignOut(): Promise<void> {
 
 export function tiktokCheck(): Promise<void> {
   return call('tiktok_check')
+}
+
+/** WestPlay's Twitch: its sign-in in a window on the desktop, its sign-out, and finding out whether it's signed
+ * in (its page run hidden). */
+export function twitchSignIn(): Promise<void> {
+  return call('twitch_sign_in')
+}
+
+export function twitchSignOut(): Promise<void> {
+  return call('twitch_sign_out')
+}
+
+export function twitchCheck(): Promise<void> {
+  return call('twitch_check')
 }
 
 /** Opens or closes WestPlay on the truck's screen (the status then reports it, once the cabin has). */

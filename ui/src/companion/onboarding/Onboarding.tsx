@@ -21,6 +21,9 @@ import {
   tiktokCheck,
   tiktokSignIn,
   tiktokSignOut,
+  twitchCheck,
+  twitchSignIn,
+  twitchSignOut,
   youtubeCheck,
   youtubeSignIn,
   youtubeSignOut,
@@ -81,6 +84,7 @@ const STEPS = [
   'spotify',
   'appleMusic',
   'tiktok',
+  'twitch',
   'tutorial',
 ] as const
 type StepId = (typeof STEPS)[number]
@@ -96,6 +100,7 @@ const POSES: Record<StepId, Pose> = {
   spotify: 'side',
   appleMusic: 'side',
   tiktok: 'side',
+  twitch: 'side',
   tutorial: 'final',
 }
 
@@ -287,6 +292,7 @@ export function Onboarding({
             {step === 'spotify' && <ServiceSignIn service="spotify" status={status} next={next} back={back} />}
             {step === 'appleMusic' && <ServiceSignIn service="appleMusic" status={status} next={next} back={back} />}
             {step === 'tiktok' && <ServiceSignIn service="tiktok" status={status} next={next} back={back} />}
+            {step === 'twitch' && <ServiceSignIn service="twitch" status={status} next={next} back={back} />}
             {step === 'tutorial' && <TutorialIntro code={code} finish={finish} back={back} />}
           </ScreenContext.Provider>
         </RoomText.Provider>
@@ -895,6 +901,23 @@ const SERVICE_STEPS = {
     check: tiktokCheck,
     signIn: tiktokSignIn,
     signOut: tiktokSignOut,
+  },
+  twitch: {
+    words: (words: Words) =>
+      newServiceWords(
+        words.locale,
+        'Twitch',
+        'regarder les streams de vos chaînes suivies',
+        'watch the streams of the channels you follow',
+      ),
+    name: 'Twitch',
+    app: 'twitch',
+    glow: GLOW.twitch,
+    signedIn: (status: HostStatus | null) => status?.twitchSignedIn,
+    signingIn: (status: HostStatus | null) => status?.twitchSigningIn ?? false,
+    check: twitchCheck,
+    signIn: twitchSignIn,
+    signOut: twitchSignOut,
   },
 } as const
 

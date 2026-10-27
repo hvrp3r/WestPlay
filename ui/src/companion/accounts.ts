@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { type HostStatus, appleMusicCheck, spotifyCheck, tiktokCheck, youtubeCheck } from './useHostStatus'
+import { type HostStatus, appleMusicCheck, spotifyCheck, tiktokCheck, twitchCheck, youtubeCheck } from './useHostStatus'
 
 /**
  * Whether each service is signed in, as the companion last knew: shown at once when it opens, kept up to date
@@ -12,11 +12,12 @@ export interface SignedIn {
   spotify: boolean | null
   appleMusic: boolean | null
   tiktok: boolean | null
+  twitch: boolean | null
 }
 
 export type Service = keyof SignedIn
 
-const SERVICES: Service[] = ['youtube', 'spotify', 'appleMusic', 'tiktok']
+const SERVICES: Service[] = ['youtube', 'spotify', 'appleMusic', 'tiktok', 'twitch']
 
 const KEY = 'westplay.companion.signedIn'
 
@@ -33,6 +34,7 @@ function kept(): SignedIn {
     spotify: known('spotify'),
     appleMusic: known('appleMusic'),
     tiktok: known('tiktok'),
+    twitch: known('twitch'),
   }
 }
 
@@ -52,6 +54,7 @@ export function useSignedIn(status: HostStatus | null): SignedIn {
     spotify: status?.spotifySignedIn ?? null,
     appleMusic: status?.appleMusicSignedIn ?? null,
     tiktok: status?.tiktokSignedIn ?? null,
+    twitch: status?.twitchSignedIn ?? null,
   }
   useEffect(() => {
     if (SERVICES.every((service) => now[service] === null)) return
@@ -61,15 +64,17 @@ export function useSignedIn(status: HostStatus | null): SignedIn {
       spotify: now.spotify ?? before.spotify,
       appleMusic: now.appleMusic ?? before.appleMusic,
       tiktok: now.tiktok ?? before.tiktok,
+      twitch: now.twitch ?? before.twitch,
     })
     // Keyed by the three answers (`now` itself is new at every render).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now.youtube, now.spotify, now.appleMusic, now.tiktok])
+  }, [now.youtube, now.spotify, now.appleMusic, now.tiktok, now.twitch])
   return {
     youtube: now.youtube ?? known.youtube,
     spotify: now.spotify ?? known.spotify,
     appleMusic: now.appleMusic ?? known.appleMusic,
     tiktok: now.tiktok ?? known.tiktok,
+    twitch: now.twitch ?? known.twitch,
   }
 }
 
@@ -81,5 +86,6 @@ export function useAskOnce(): void {
     if (known.spotify === null) spotifyCheck().catch(() => {})
     if (known.appleMusic === null) appleMusicCheck().catch(() => {})
     if (known.tiktok === null) tiktokCheck().catch(() => {})
+    if (known.twitch === null) twitchCheck().catch(() => {})
   }, [])
 }

@@ -132,6 +132,24 @@ fn tiktok_check(accounts: State<Accounts>) {
     accounts.0.tiktok.request(AccountAction::Check);
 }
 
+/// Opens Twitch's sign-in in a window on the desktop (WestPlay's Twitch; the status then says when it's done).
+#[tauri::command]
+fn twitch_sign_in(accounts: State<Accounts>) {
+    accounts.0.twitch.request(AccountAction::SignIn);
+}
+
+/// Signs Twitch out.
+#[tauri::command]
+fn twitch_sign_out(accounts: State<Accounts>) {
+    accounts.0.twitch.request(AccountAction::SignOut);
+}
+
+/// Runs Twitch's page (hidden), so the status says whether it's signed in.
+#[tauri::command]
+fn twitch_check(accounts: State<Accounts>) {
+    accounts.0.twitch.request(AccountAction::Check);
+}
+
 /// The maker's Kreosus page, where players support WestPlay's development.
 const SUPPORT_PAGE: &str = "https://kreosus.com/enes-less";
 
@@ -209,6 +227,9 @@ fn main() {
             tiktok_sign_in,
             tiktok_sign_out,
             tiktok_check,
+            twitch_sign_in,
+            twitch_sign_out,
+            twitch_check,
             open_support_page,
             app_log_place,
             customize::customize_list,

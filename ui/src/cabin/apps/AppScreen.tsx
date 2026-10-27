@@ -9,6 +9,7 @@ import { MusicApp } from './music/MusicApp'
 import { SettingsApp } from './settings/SettingsApp'
 import { SpotifyApp } from './spotify/SpotifyApp'
 import { TikTokApp } from './tiktok/TikTokApp'
+import { TwitchApp } from './twitch/TwitchApp'
 import { YouTubeMusicApp } from './youtubeMusic/YouTubeMusicApp'
 import { WeatherApp } from './weather/WeatherApp'
 import { YouTubeApp } from './youtube/YouTubeApp'
@@ -86,6 +87,8 @@ function AppContent({ app }: { app: AppId }) {
       return <YouTubeMusicApp />
     case 'tiktok':
       return <TikTokApp />
+    case 'twitch':
+      return <TwitchApp />
     case 'settings':
       return <SettingsApp />
     case 'weather':

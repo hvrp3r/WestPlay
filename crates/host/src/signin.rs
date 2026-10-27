@@ -108,6 +108,16 @@ pub const TIKTOK: Site = Site {
     not_yet: &["login", "signup"],
     page_says: None,
 };
+
+/// Twitch's sign-in (WestPlay's), coming back to Twitch: its own pages until then are its sign-in and sign-up.
+pub const TWITCH: Site = Site {
+    sign_in: "https://www.twitch.tv/login",
+    title: "Sign in to Twitch - WestPlay",
+    home: "https://www.twitch.tv/",
+    not_yet: &["login", "signup", "passport"],
+    page_says: None,
+};
+
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
 const SIZE: (i32, i32) = (520, 760);
 /// Windows' message for the mouse leaving a window that asked to be told (its value, from WinUser.h).
@@ -575,6 +585,14 @@ mod tests {
         assert_eq!(progress_at(&TIKTOK, "https://www.tiktok.com/signup"), Progress::Signing);
         assert_eq!(progress_at(&TIKTOK, "https://www.tiktok.com/foryou?lang=fr"), Progress::SignedIn);
         assert_eq!(progress_at(&TIKTOK, "https://evil.example/?https://www.tiktok.com/"), Progress::Signing);
+    }
+
+    #[test]
+    fn is_signed_in_to_twitch_once_back_on_twitch() {
+        assert_eq!(progress_at(&TWITCH, TWITCH.sign_in), Progress::Signing);
+        assert_eq!(progress_at(&TWITCH, "https://www.twitch.tv/signup"), Progress::Signing);
+        assert_eq!(progress_at(&TWITCH, "https://www.twitch.tv/"), Progress::SignedIn);
+        assert_eq!(progress_at(&TWITCH, "https://evil.example/?https://www.twitch.tv/"), Progress::Signing);
     }
 
     /// Apple Music's sign-in stays on its web player: signed in only once its page says so.

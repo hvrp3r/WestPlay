@@ -203,6 +203,10 @@ export type HostMessage =
   | { type: 'youtubeSignIn'; open: boolean }
   /** WestPlay's TikTok: what plays (`null`: TikTok isn't running), and whether its sign-in is under way. */
   | { type: 'tiktok'; state: TikTokState | null; signingIn: boolean }
+  /** WestPlay's Twitch: what its page says (`null`: Twitch isn't running), and whether its sign-in is under way. */
+  | { type: 'twitch'; state: TwitchState | null; signingIn: boolean }
+  /** WestPlay's Twitch: a list's channels live, as read on its page. */
+  | { type: 'twitchList'; which: TwitchList; channels: TwitchCard[] }
   /** The map the cab shows: its folder in WestPlay's maps (served at `https://westplay.maps/`), and when it
    * was built; `null` for none (none built yet). */
   | { type: 'map'; folder: string | null; built: number | null }
@@ -322,6 +326,8 @@ export type PageMessage =
   | { type: 'youtubeMusic'; command: YouTubeMusicCommand }
   /** A command for WestPlay's TikTok (`westplay_host::tiktok::Command`). */
   | { type: 'tiktok'; command: TikTokCommand }
+  /** A command for WestPlay's Twitch (`westplay_host::twitch::Command`). */
+  | { type: 'twitch'; command: TwitchCommand }
 
 /** What the Spotify app asks of Spotify's web player (`westplay_host::spotify::Command`), run hidden by the
  * host: its sign-in, a question (answered with `spotifyAnswer` and the same `id`), and the player's controls
@@ -881,6 +887,49 @@ export type TikTokCommand =
   | { action: 'volume'; percent: number }
   | { action: 'show'; x: number; y: number; width: number; height: number }
   | { action: 'play' | 'pause' | 'acceptGate' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'watch'; channel: string }
+  | { action: 'volume'; percent: number }
+  | { action: 'show'; x: number; y: number; width: number; height: number }
+  | { action: 'home' | 'more' | 'play' | 'pause' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'like' | 'watch' | 'thread'; id: string }
+  | { action: 'volume'; percent: number }
+  | { action: 'show'; x: number; y: number; width: number; height: number }
+
+/** A list of Twitch's channels live: the player's followed ones, or the most watched. */
+export type TwitchList = 'following' | 'popular'
+
+/** A channel live, as a list shows it (`westplay_host::twitch::Card`). */
+export interface TwitchCard {
+  login: string
+  name: string
+  title: string
+  game: string
+  /** Twitch's own count ("17.6K viewers"). */
+  viewers: string
+  avatar: string | null
+  thumbnail: string | null
+}
+
+/** What WestPlay's Twitch page says (`westplay_host::twitch::State`). */
+export interface TwitchState {
+  loaded: boolean
+  signedIn: boolean
+  /** The channel whose page it is (`null`: a list). */
+  channel: string | null
+  name: string
+  title: string
+  game: string
+  viewers: string
+  live: boolean
+  /** Twitch's warning on the stream's content is up. */
+  gate: boolean
+  playing: boolean
+}
+
+/** What WestPlay's Twitch app asks of Twitch's page (`westplay_host::twitch::Command`). */
+export type TwitchCommand =
+  | { action: 'play' | 'pause' | 'acceptGate' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'browse'; which: TwitchList }
   | { action: 'watch'; channel: string }
   | { action: 'volume'; percent: number }
   | { action: 'show'; x: number; y: number; width: number; height: number }

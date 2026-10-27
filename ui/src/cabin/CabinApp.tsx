@@ -5,6 +5,7 @@ import { keybinds } from './apps/keybinds'
 import { oneAtATime } from './apps/oneAtATime'
 import { pauseSpotifyWithGame, spotifyPlayer } from './apps/spotify/pauseWithGame'
 import { pauseTikTokWithGame, tiktokPlayer } from './apps/tiktok/pauseWithGame'
+import { pauseTwitchWithGame, twitchPlayer } from './apps/twitch/pauseWithGame'
 import { pauseYouTubeWithGame, youtubePlayer } from './apps/youtube/pauseWithGame'
 import { pauseYouTubeMusicWithGame, youtubeMusicPlayer } from './apps/youtubeMusic/pauseWithGame'
 import { AppScreen } from './apps/AppScreen'
@@ -41,8 +42,12 @@ export function CabinApp() {
   useEffect(() => pauseAppleMusicWithGame(), [])
   useEffect(() => pauseYouTubeMusicWithGame(), [])
   useEffect(() => pauseTikTokWithGame(), [])
+  useEffect(() => pauseTwitchWithGame(), [])
   // One of them at a time: the newest to start plays on, the others pause (apps/oneAtATime.ts).
-  useEffect(() => oneAtATime([youtubePlayer, spotifyPlayer, appleMusicPlayer, youtubeMusicPlayer, tiktokPlayer]), [])
+  useEffect(
+    () => oneAtATime([youtubePlayer, spotifyPlayer, appleMusicPlayer, youtubeMusicPlayer, tiktokPlayer, twitchPlayer]),
+    [],
+  )
   // The player's keybinds pressed in the game: the music's volume, or play/pause (apps/keybinds.ts).
   useEffect(() => followKeybinds(), [])
   // The clock where the truck is: its country's time zone, as the game's own clock (state/timeZone.ts).

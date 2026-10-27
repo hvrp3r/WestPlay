@@ -41,6 +41,7 @@ const ROLES: AppIconRole[] = [
   'youtube',
   'youtubeMusic',
   'tiktok',
+  'twitch',
 ]
 
 /** Every icon file an icon set (`null`: WestPlay's own) can show, in both looks. */

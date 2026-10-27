@@ -29,6 +29,7 @@ import {
   receiveState as receiveSpotifyState,
 } from '../apps/spotify/spotify'
 import { receiveTikTok } from '../apps/tiktok/tiktok'
+import { receiveTwitch, receiveTwitchList } from '../apps/twitch/twitch'
 import { receiveAnswer, receiveState, useYouTube } from '../apps/youtube/youtube'
 import {
   receiveAnswer as receiveYouTubeMusicAnswer,
@@ -531,6 +532,16 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         receiveTikTok(message.state, message.signingIn)
         break
         break
+        break
+        break
+        break
+        break
+        break
+      case 'twitch':
+        receiveTwitch(message.state, message.signingIn)
+        break
+      case 'twitchList':
+        receiveTwitchList(message.which, message.channels)
         break
         break
         break

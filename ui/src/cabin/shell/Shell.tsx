@@ -8,6 +8,7 @@ import { textScale } from '../state/textSize'
 import { Player } from '../apps/youtube/Player'
 import { type Hole, useYouTube } from '../apps/youtube/youtube'
 import { useTikTok } from '../apps/tiktok/tiktok'
+import { useTwitch } from '../apps/twitch/twitch'
 import { useYouTubeMusic } from '../apps/youtubeMusic/youtubeMusic'
 import { Keyboard } from '../keyboard/Keyboard'
 import { useCabin, useLive } from '../state/store'
@@ -79,7 +80,9 @@ export function Shell({ children, overlay, entering = false }: ShellProps) {
   const musicHole = useYouTubeMusic((state) => state.hole)
   // WestPlay's TikTok, its video through its app.
   const tiktokHole = useTikTok((state) => state.hole)
-  const hole = youtubeHole ?? musicHole ?? tiktokHole
+  // WestPlay's Twitch, its stream through its app.
+  const twitchHole = useTwitch((state) => state.hole)
+  const hole = youtubeHole ?? musicHole ?? tiktokHole ?? twitchHole
   // Over a video full screen, pointing at the left edge brings the sidebar back (shell/sidebarPeek.ts).
   const carplay = useRef<HTMLDivElement>(null)
   const peek = useSidebarPeek(watching, carplay)
