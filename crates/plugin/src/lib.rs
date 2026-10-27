@@ -18,6 +18,7 @@ mod navigation;
 mod screens;
 mod scs;
 mod telemetry;
+mod traffic;
 mod truckersmp;
 mod typing;
 
@@ -71,6 +72,7 @@ unsafe fn init(version: u32, params: *const TelemetryInitParamsV100) -> i32 {
 
         telemetry::register(params);
         camera::locate();
+        traffic::locate();
         // WestPlay's screen mod, before the game mounts the profile's mods.
         mod_mount::mount(&game_id);
 

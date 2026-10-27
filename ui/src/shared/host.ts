@@ -86,6 +86,17 @@ export interface JobInfo {
   income: number
 }
 
+/** The player's last fine (WestPlay's reports): the SDK's offence (`speeding`...), its amount, and where and
+ * when it was given (world x and z, in-game minutes). `count` tells one fine from the next. */
+export interface FineInfo {
+  count: number
+  offence: string
+  amount: number
+  x: number
+  z: number
+  gameTime: number
+}
+
 /** What a keybind does: the music's volume a step up or down, or it paused or played on. */
 export type KeybindAction = 'volumeUp' | 'volumeDown' | 'playPause'
 
@@ -93,6 +104,10 @@ export type HostMessage =
   | { type: 'telemetry'; data: Telemetry }
   | { type: 'truck'; data: TruckInfo }
   | { type: 'job'; data: JobInfo }
+  | { type: 'fine'; data: FineInfo }
+  /** The police (kind 1) and tow trucks (2) of the AI traffic around the player (WestPlay's reports): the
+   * vehicle (the game's object for it, as text), its kind, where (world x and z) and how fast (m/s). */
+  | { type: 'sightings'; vehicles: [id: string, kind: number, x: number, z: number, speed: number][] }
   /** `null` until the game has drawn a WestPlay screen. Checked against the known ids on arrival. */
   | { type: 'screen'; layout: string | null }
   /** The settings the page applies: whether the truck's own strip stays beside WestPlay

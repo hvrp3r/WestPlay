@@ -27,7 +27,7 @@ pub fn bridge_name() -> String {
     format!("Local\\WestPlay.Bridge.v{BRIDGE_VERSION}")
 }
 pub const BRIDGE_MAGIC: u32 = u32::from_le_bytes(*b"WPB7");
-pub const BRIDGE_VERSION: u32 = 24;
+pub const BRIDGE_VERSION: u32 = 25;
 
 /// Size of the app's frames, and the base size of the screen textures in the mod (`westplay_setup::game_mod`
 /// builds them from these).
@@ -227,6 +227,11 @@ pub struct PluginBlock {
     pub truck: SeqLock<TruckInfo>,
     /// The player's job (`active` false when there is none).
     pub job: SeqLock<JobInfo>,
+    /// The player's last fine (WestPlay's reports: `count` 0 until the first since the game started).
+    pub fine: SeqLock<FineInfo>,
+    /// The police cars and tow trucks of the AI traffic around the player (WestPlay's reports), written
+    /// every second or so by the plugin (its `traffic`).
+    pub sightings: SeqLock<Sightings>,
     /// Mouse input for the WestPlay screen while the player holds the interaction key.
     pub pointer: PointerBlock,
     /// Under TruckersMP: the players around the player, from TruckersMP's SDK (the plugin's `truckersmp`).
@@ -643,6 +648,62 @@ pub struct JobInfo {
     pub income: u64,
 }
 
+/// The player's last fine, from the SDK's "player.fined" gameplay event, with where and when it was given:
+/// WestPlay turns it into a report on the map (a police check where the player was fined for speeding...).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+pub struct FineInfo {
+    /// Fines since the game started: a new one is a new count.
+    pub count: u32,
+    /// The SDK's `fine.offence`, e.g. `speeding`, `speeding_camera`, `red_signal`, `crash`.
+    pub offence: FixedStr<32>,
+    /// The SDK's `fine.amount`, in the game's currency.
+    pub amount: i64,
+    /// Where the truck was (world x and z, metres).
+    pub x: f64,
+    pub z: f64,
+    /// When (in-game minutes, as the telemetry's `game_time`).
+    pub game_time: u32,
+}
+
+/// The most vehicles of note [`Sightings`] carries (the game's traffic around the player holds some 40 vehicles).
+pub const SIGHTINGS_MAX: usize = 16;
+
+/// What a vehicle of note is: [`SIGHTED_POLICE`] or [`SIGHTED_TOW`].
+pub const SIGHTED_POLICE: u8 = 1;
+pub const SIGHTED_TOW: u8 = 2;
+
+/// A vehicle of note in the AI traffic around the player: what it is, which one (the game's object for it,
+/// the same while it's around), where (world x and z, metres) and how fast (m/s).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Sighting {
+    pub id: u64,
+    pub x: f64,
+    pub z: f64,
+    pub speed: f32,
+    pub kind: u8,
+}
+
+/// The vehicles of note around the player, the first `count` of `vehicles`, as of the game frame `frame`
+/// (the plugin's heartbeat; 0: never written).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Sightings {
+    pub frame: u64,
+    pub count: u32,
+    pub vehicles: [Sighting; SIGHTINGS_MAX],
+}
+
+impl Sightings {
+    /// The vehicles written (a count read torn is bounded).
+    pub fn vehicles(&self) -> &[Sighting] {
+        &self.vehicles[..(self.count as usize).min(SIGHTINGS_MAX)]
+    }
+}
+
 /// A UTF-8 string stored inline in shared memory: NUL-padded, truncated at a character boundary.
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -712,6 +773,10 @@ unsafe impl Plain for Telemetry {}
 unsafe impl Plain for TruckInfo {}
 // SAFETY: byte strings, integers, floats and `bool`s only (see `Plain`).
 unsafe impl Plain for JobInfo {}
+// SAFETY: byte strings, integers and floats only (see `Plain`).
+unsafe impl Plain for FineInfo {}
+// SAFETY: integers and floats only (see `Plain`); a count read torn is bounded by `Sightings::vehicles`.
+unsafe impl Plain for Sightings {}
 // SAFETY: integers and floats only (see `Plain`); a count read torn is bounded by `Nearby::players`.
 unsafe impl Plain for Nearby {}
 

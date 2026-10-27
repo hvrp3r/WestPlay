@@ -56,6 +56,9 @@ pub const SCS_TELEMETRY_EVENT_FRAME_END: u32 = 2;
 pub const SCS_TELEMETRY_EVENT_PAUSED: u32 = 3;
 pub const SCS_TELEMETRY_EVENT_STARTED: u32 = 4;
 pub const SCS_TELEMETRY_EVENT_CONFIGURATION: u32 = 5;
+/// A gameplay event (a fine, a job delivered...): its `info` is the SDK's `scs_telemetry_gameplay_event_t`,
+/// laid out as a [`ConfigurationEvent`] (an id and its attributes).
+pub const SCS_TELEMETRY_EVENT_GAMEPLAY: u32 = 6;
 
 pub const SCS_VALUE_TYPE_BOOL: u32 = 1;
 pub const SCS_VALUE_TYPE_S32: u32 = 2;
@@ -128,6 +131,11 @@ impl ScsValue {
     pub fn u64(&self) -> u64 {
         // SAFETY: the union is 40 bytes, 8-aligned (`[u64; 5]`); this plain type fits it and is valid for any bits.
         unsafe { (self.data() as *const u64).read() }
+    }
+
+    pub fn s64(&self) -> i64 {
+        // SAFETY: the union is 40 bytes, 8-aligned (`[u64; 5]`); this plain type fits it and is valid for any bits.
+        unsafe { (self.data() as *const i64).read() }
     }
 
     pub fn float(&self) -> f32 {

@@ -8,13 +8,13 @@ use std::ffi::{CStr, CString, c_char, c_void};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use westplay_shared::{FixedStr, JobInfo, Telemetry, TruckInfo};
+use westplay_shared::{FineInfo, FixedStr, JobInfo, Telemetry, TruckInfo};
 
 use crate::scs::{
     ChannelCallback, ConfigurationEvent, EventCallback, SCS_RESULT_OK, SCS_TELEMETRY_EVENT_CONFIGURATION,
-    SCS_TELEMETRY_EVENT_FRAME_END, SCS_TELEMETRY_EVENT_PAUSED, SCS_TELEMETRY_EVENT_STARTED, SCS_U32_NIL,
-    SCS_VALUE_TYPE_BOOL, SCS_VALUE_TYPE_DPLACEMENT, SCS_VALUE_TYPE_FLOAT, SCS_VALUE_TYPE_FPLACEMENT,
-    SCS_VALUE_TYPE_S32, SCS_VALUE_TYPE_U32, ScsValue, TelemetryInitParamsV100,
+    SCS_TELEMETRY_EVENT_FRAME_END, SCS_TELEMETRY_EVENT_GAMEPLAY, SCS_TELEMETRY_EVENT_PAUSED,
+    SCS_TELEMETRY_EVENT_STARTED, SCS_U32_NIL, SCS_VALUE_TYPE_BOOL, SCS_VALUE_TYPE_DPLACEMENT, SCS_VALUE_TYPE_FLOAT,
+    SCS_VALUE_TYPE_FPLACEMENT, SCS_VALUE_TYPE_S32, SCS_VALUE_TYPE_U32, ScsValue, TelemetryInitParamsV100,
 };
 use crate::{bridge, log};
 
@@ -150,6 +150,7 @@ pub unsafe fn register(params: &TelemetryInitParamsV100) {
             SCS_TELEMETRY_EVENT_PAUSED,
             SCS_TELEMETRY_EVENT_STARTED,
             SCS_TELEMETRY_EVENT_CONFIGURATION,
+            SCS_TELEMETRY_EVENT_GAMEPLAY,
         ] {
             let result = register_event(event, on_event, std::ptr::null_mut());
             if result != SCS_RESULT_OK {
@@ -199,6 +200,13 @@ unsafe fn on_game_event(event: u32, info: *const c_void) {
             }
             return;
         }
+        // A gameplay event's `info` is laid out as a configuration's (an id and its attributes).
+        if event == SCS_TELEMETRY_EVENT_GAMEPLAY {
+            if let Some(gameplay) = (info as *const ConfigurationEvent).as_ref() {
+                on_gameplay(gameplay);
+            }
+            return;
+        }
         let mut snapshot = SNAPSHOT.lock().unwrap_or_else(|e| e.into_inner());
         match event {
             // Logged as they come: the screen's use and the music stop and go on with them.
@@ -238,7 +246,17 @@ unsafe fn on_game_event(event: u32, info: *const c_void) {
                     bridge.plugin.telemetry.write(&published);
                 }
                 let (speed, paused) = (snapshot.speed, snapshot.paused);
+                let truck = [snapshot.x, snapshot.y, snapshot.z];
                 drop(snapshot);
+                // The police and tow trucks in the AI traffic around the truck (traffic.rs), for the reports. Not
+                // under TruckersMP: its servers have rules of their own on what reads the game, and its traffic isn't
+                // the game's.
+                if !paused
+                    && !crate::truckersmp::running()
+                    && let Some(bridge) = bridge::get()
+                {
+                    crate::traffic::update(truck, bridge.plugin.heartbeat.load(Ordering::Relaxed));
+                }
                 // Whether the player's keys type into WestPlay's field: they stop the moment the truck moves.
                 crate::typing::update(speed, paused);
                 // The end of a frame is on the game's main thread, where its navigator may be changed.
@@ -354,6 +372,42 @@ unsafe fn on_job(configuration: &ConfigurationEvent) {
         );
         if let Some(bridge) = bridge::get() {
             bridge.plugin.job.write(&job);
+        }
+    }
+}
+
+/// Fines given so far: each one published is the next count.
+static FINES: Mutex<u32> = Mutex::new(0);
+
+/// Publishes a fine (the "player.fined" gameplay event) with where the truck is and the game's time, for
+/// WestPlay's reports. Other gameplay events are left alone.
+///
+/// # Safety
+/// As [`on_configuration`].
+unsafe fn on_gameplay(gameplay: &ConfigurationEvent) {
+    // SAFETY: the SDK's strings, nul-terminated and alive through the call; checked for none first.
+    unsafe {
+        if gameplay.id.is_null() || CStr::from_ptr(gameplay.id).to_bytes() != b"player.fined" {
+            return;
+        }
+        let mut fine = FineInfo::default();
+        for attribute in gameplay.attributes() {
+            match CStr::from_ptr(attribute.name).to_bytes() {
+                b"fine.offence" => fine.offence = FixedStr::new(&attribute.value.string().unwrap_or_default()),
+                b"fine.amount" => fine.amount = attribute.value.s64(),
+                _ => {}
+            }
+        }
+        {
+            let snapshot = SNAPSHOT.lock().unwrap_or_else(|e| e.into_inner());
+            (fine.x, fine.z, fine.game_time) = (snapshot.x, snapshot.z, snapshot.game_time);
+        }
+        let mut fines = FINES.lock().unwrap_or_else(|e| e.into_inner());
+        *fines += 1;
+        fine.count = *fines;
+        log!("fined: {} ({}) at {:.0}, {:.0}", fine.offence.as_str(), fine.amount, fine.x, fine.z);
+        if let Some(bridge) = bridge::get() {
+            bridge.plugin.fine.write(&fine);
         }
     }
 }

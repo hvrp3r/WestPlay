@@ -17,6 +17,7 @@ import {
   type TruckInfo,
 } from '../../shared/host'
 import type { Maneuver, TurnKind } from '../maps/guidance'
+import { receiveFine, receiveSightings } from '../maps/reportsStore'
 import {
   receiveAnswer as receiveAppleMusicAnswer,
   receivePlayback as receiveAppleMusicPlayback,
@@ -378,6 +379,14 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         break
       case 'job':
         useLive.setState({ job: message.data.active ? message.data : null })
+        break
+      case 'fine':
+        receiveFine(message.data)
+        break
+      case 'sightings':
+        receiveSightings(
+          message.vehicles.map(([id, kind, x, z, speed]) => ({ id, kind: kind === 1 ? 'police' : 'tow', x, z, speed })),
+        )
         break
       case 'garages':
         useLive.setState({ ownedGarages: message.owned, headquarters: message.headquarters })

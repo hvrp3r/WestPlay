@@ -41,7 +41,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::time::{Duration, Instant};
 
-use westplay_shared::{BridgeMapping, JobInfo, Keybind, Telemetry, TruckInfo, screen_layouts};
+use westplay_shared::{BridgeMapping, FineInfo, JobInfo, Keybind, Telemetry, TruckInfo, screen_layouts};
 use windows::Win32::Foundation::LUID;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
 use windows::Win32::UI::WindowsAndMessaging::{DispatchMessageW, MSG, PM_REMOVE, PeekMessageW, TranslateMessage};
@@ -294,6 +294,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut last_telemetry: Option<Telemetry> = None;
     let mut last_truck: Option<TruckInfo> = None;
     let mut last_job: Option<JobInfo> = None;
+    let mut last_fine: Option<FineInfo> = None;
+    // The police and tow trucks around the player (WestPlay's reports): the game frame they were last sent as of.
+    let mut sightings_sent: u64 = 0;
     let mut last_layout: Option<u32> = None;
     // The game's menu gone while it's still paused (`camera::MenuGone`), and as last told to the page.
     let mut menu = camera::MenuGone::default();
@@ -1473,6 +1476,25 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 let message = serde_json::json!({ "type": "job", "data": job });
                 let _ = webview.post_json(&message.to_string());
             }
+            // The player's last fine, for WestPlay's reports: the page keeps each one once (by its count and
+            // time), so one sent again as the page reloads changes nothing.
+            if let Some(fine) = plugin.fine.read()
+                && fine.count > 0
+                && last_fine != Some(fine)
+            {
+                last_fine = Some(fine);
+                let message = serde_json::json!({ "type": "fine", "data": fine });
+                let _ = webview.post_json(&message.to_string());
+            }
+            // The police and tow trucks around the player, as the plugin last read them (every second or so).
+            if game_running
+                && let Some(sightings) = plugin.sightings.read()
+                && sightings.frame != 0
+                && sightings.frame != sightings_sent
+            {
+                sightings_sent = sightings.frame;
+                let _ = webview.post_json(&sightings_message(&sightings));
+            }
             let layout = plugin.screen_layout.load(Ordering::Acquire);
             if last_layout != Some(layout) {
                 last_layout = Some(layout);
@@ -1705,6 +1727,21 @@ fn nearby_message(nearby: Option<&westplay_shared::Nearby>) -> String {
 /// `{"type":"cursor","host":…}`: whether the host draws the screen's cursor (`cursor`), or the page draws its own.
 fn cursor_message(host: bool) -> String {
     serde_json::json!({ "type": "cursor", "host": host }).to_string()
+}
+
+/// `{"type":"sightings","vehicles":[[id, kind, x, z, speed], …]}`: the police (kind 1) and tow trucks (2) of
+/// the AI traffic around the player, for WestPlay's reports. Ids as strings: the game's addresses don't fit a
+/// JavaScript number.
+fn sightings_message(sightings: &westplay_shared::Sightings) -> String {
+    serde_json::json!({
+        "type": "sightings",
+        "vehicles": sightings
+            .vehicles()
+            .iter()
+            .map(|v| serde_json::json!([v.id.to_string(), v.kind, v.x, v.z, v.speed]))
+            .collect::<Vec<_>>(),
+    })
+    .to_string()
 }
 
 /// `{"type":"truckersmp","on":…}`: whether the game runs under TruckersMP (the page shows its other players).
