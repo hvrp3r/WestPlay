@@ -118,6 +118,16 @@ pub const TWITCH: Site = Site {
     page_says: None,
 };
 
+/// X's sign-in (WestPlay's), done once X is on the player's timeline (its sign-in's own steps are elsewhere on
+/// x.com).
+pub const X: Site = Site {
+    sign_in: "https://x.com/i/flow/login",
+    title: "Sign in to X - WestPlay",
+    home: "https://x.com/home",
+    not_yet: &[],
+    page_says: None,
+};
+
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
 const SIZE: (i32, i32) = (520, 760);
 /// Windows' message for the mouse leaving a window that asked to be told (its value, from WinUser.h).
@@ -593,6 +603,14 @@ mod tests {
         assert_eq!(progress_at(&TWITCH, "https://www.twitch.tv/signup"), Progress::Signing);
         assert_eq!(progress_at(&TWITCH, "https://www.twitch.tv/"), Progress::SignedIn);
         assert_eq!(progress_at(&TWITCH, "https://evil.example/?https://www.twitch.tv/"), Progress::Signing);
+    }
+
+    #[test]
+    fn is_signed_in_to_x_once_on_the_timeline() {
+        assert_eq!(progress_at(&X, X.sign_in), Progress::Signing);
+        assert_eq!(progress_at(&X, "https://x.com/i/jf/onboarding/web?mode=login"), Progress::Signing);
+        assert_eq!(progress_at(&X, "https://x.com/home"), Progress::SignedIn);
+        assert_eq!(progress_at(&X, "https://evil.example/?https://x.com/home"), Progress::Signing);
     }
 
     /// Apple Music's sign-in stays on its web player: signed in only once its page says so.

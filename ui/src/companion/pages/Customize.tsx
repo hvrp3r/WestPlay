@@ -39,6 +39,7 @@ const ICON_FILES: [AppIconRole, string][] = [
   ['youtubeMusic', 'youtube-music'],
   ['tiktok', 'tiktok'],
   ['twitch', 'twitch'],
+  ['x', 'x'],
 ]
 
 /**

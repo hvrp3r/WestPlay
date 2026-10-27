@@ -36,6 +36,9 @@ export interface HostStatus {
   /** The same of WestPlay's Twitch. */
   twitchSignedIn: boolean | null
   twitchSigningIn: boolean
+  /** The same of WestPlay's X. */
+  xSignedIn: boolean | null
+  xSigningIn: boolean
   /** The map of the profile played (mirrors `westplay_host::maps::MapStatus`). */
   map: MapStatus
   /** The map the cab shows: its folder in WestPlay's maps, and when it was built (seconds since 1970;
@@ -178,6 +181,20 @@ export function twitchSignOut(): Promise<void> {
 
 export function twitchCheck(): Promise<void> {
   return call('twitch_check')
+}
+
+/** WestPlay's X: its sign-in in a window on the desktop, its sign-out, and finding out whether it's signed in
+ * (its page run hidden). */
+export function xSignIn(): Promise<void> {
+  return call('x_sign_in')
+}
+
+export function xSignOut(): Promise<void> {
+  return call('x_sign_out')
+}
+
+export function xCheck(): Promise<void> {
+  return call('x_check')
 }
 
 /** Opens or closes WestPlay on the truck's screen (the status then reports it, once the cabin has). */

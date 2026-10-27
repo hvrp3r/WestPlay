@@ -207,6 +207,12 @@ export type HostMessage =
   | { type: 'twitch'; state: TwitchState | null; signingIn: boolean }
   /** WestPlay's Twitch: a list's channels live, as read on its page. */
   | { type: 'twitchList'; which: TwitchList; channels: TwitchCard[] }
+  /** WestPlay's X: what its page says (`null`: X isn't running), and whether its sign-in is under way. */
+  | { type: 'twitter'; state: XState | null; signingIn: boolean }
+  /** WestPlay's X: the timeline's posts, as read on its page. */
+  | { type: 'twitterFeed'; which: XFeed; posts: XPost[] }
+  /** WestPlay's X: a post's conversation (the posts it answers, it, the replies to it), as read on its page. */
+  | { type: 'twitterThread'; id: string; posts: XPost[] }
   /** The map the cab shows: its folder in WestPlay's maps (served at `https://westplay.maps/`), and when it
    * was built; `null` for none (none built yet). */
   | { type: 'map'; folder: string | null; built: number | null }
@@ -328,6 +334,8 @@ export type PageMessage =
   | { type: 'tiktok'; command: TikTokCommand }
   /** A command for WestPlay's Twitch (`westplay_host::twitch::Command`). */
   | { type: 'twitch'; command: TwitchCommand }
+  /** A command for WestPlay's X (`westplay_host::twitter::Command`). */
+  | { type: 'twitter'; command: XCommand }
 
 /** What the Spotify app asks of Spotify's web player (`westplay_host::spotify::Command`), run hidden by the
  * host: its sign-in, a question (answered with `spotifyAnswer` and the same `id`), and the player's controls
@@ -934,6 +942,64 @@ export type TwitchCommand =
   | { action: 'volume'; percent: number }
   | { action: 'show'; x: number; y: number; width: number; height: number }
   | { action: 'home' | 'more' | 'play' | 'pause' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'like' | 'watch' | 'thread'; id: string }
+  | { action: 'volume'; percent: number }
+  | { action: 'show'; x: number; y: number; width: number; height: number }
+
+/** An X timeline: For you, or the accounts the player follows. */
+export type XFeed = 'forYou' | 'following'
+
+/** A post on X, as the app shows it (`westplay_host::twitter::Post`). */
+export interface XPost {
+  id: string
+  /** Whom it answers (their handles), if it's a reply. */
+  replyTo: string[]
+  name: string
+  handle: string
+  avatar: string | null
+  /** "Someone reposted", "Pinned"... */
+  context: string
+  text: string
+  /** When it was posted (ISO 8601). */
+  time: string
+  images: string[]
+  /** Its video's still (`''`: a video without one); `null`: no video. */
+  video: string | null
+  replies: string
+  reposts: string
+  likes: string
+  liked: boolean
+  /** The post it quotes, shown inside it. */
+  quote: XQuote | null
+}
+
+/** The post a post quotes (`westplay_host::twitter::Quote`): its id (`null`: X doesn't link it), author, text,
+ * pictures and video's still, as a post's. */
+export interface XQuote {
+  id: string | null
+  name: string
+  handle: string
+  avatar: string | null
+  text: string
+  time: string
+  images: string[]
+  video: string | null
+}
+
+/** What WestPlay's X page says (`westplay_host::twitter::State`). */
+export interface XState {
+  loaded: boolean
+  signedIn: boolean
+  /** The post whose page it is (`null`: the timeline). */
+  status: string | null
+  video: boolean
+  playing: boolean
+}
+
+/** What WestPlay's X app asks of X's page (`westplay_host::twitter::Command`). */
+export type XCommand =
+  | { action: 'home' | 'more' | 'play' | 'pause' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'feed'; which: XFeed }
   | { action: 'like' | 'watch' | 'thread'; id: string }
   | { action: 'volume'; percent: number }
   | { action: 'show'; x: number; y: number; width: number; height: number }

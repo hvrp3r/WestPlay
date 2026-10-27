@@ -11,6 +11,7 @@ describe('the apps this release has', () => {
       'youtubeMusic',
       'tiktok',
       'twitch',
+      'x',
       'weather',
       'settings',
     ])

@@ -150,6 +150,24 @@ fn twitch_check(accounts: State<Accounts>) {
     accounts.0.twitch.request(AccountAction::Check);
 }
 
+/// Opens X's sign-in in a window on the desktop (WestPlay's X; the status then says when it's done).
+#[tauri::command]
+fn x_sign_in(accounts: State<Accounts>) {
+    accounts.0.x.request(AccountAction::SignIn);
+}
+
+/// Signs X out.
+#[tauri::command]
+fn x_sign_out(accounts: State<Accounts>) {
+    accounts.0.x.request(AccountAction::SignOut);
+}
+
+/// Runs X's page (hidden), so the status says whether it's signed in.
+#[tauri::command]
+fn x_check(accounts: State<Accounts>) {
+    accounts.0.x.request(AccountAction::Check);
+}
+
 /// The maker's Kreosus page, where players support WestPlay's development.
 const SUPPORT_PAGE: &str = "https://kreosus.com/enes-less";
 
@@ -230,6 +248,9 @@ fn main() {
             twitch_sign_in,
             twitch_sign_out,
             twitch_check,
+            x_sign_in,
+            x_sign_out,
+            x_check,
             open_support_page,
             app_log_place,
             customize::customize_list,

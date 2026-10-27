@@ -30,6 +30,7 @@ import {
 } from '../apps/spotify/spotify'
 import { receiveTikTok } from '../apps/tiktok/tiktok'
 import { receiveTwitch, receiveTwitchList } from '../apps/twitch/twitch'
+import { receiveX, receiveXThread, receiveXTimeline } from '../apps/x/x'
 import { receiveAnswer, receiveState, useYouTube } from '../apps/youtube/youtube'
 import {
   receiveAnswer as receiveYouTubeMusicAnswer,
@@ -545,6 +546,18 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         break
         break
         break
+        break
+        break
+        break
+        break
+      case 'twitter':
+        receiveX(message.state, message.signingIn)
+        break
+      case 'twitterFeed':
+        receiveXTimeline(message.which, message.posts)
+        break
+      case 'twitterThread':
+        receiveXThread(message.id, message.posts)
         break
       case 'map':
         receiveMapFolder(message.folder, message.built)
