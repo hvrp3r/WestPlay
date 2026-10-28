@@ -157,6 +157,11 @@ fn session() -> std::sync::MutexGuard<'static, Option<Session>> {
     SESSION.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// Whether the game runs under TruckersMP (its client started this plugin's TruckersMP side).
+pub fn running() -> bool {
+    session().is_some()
+}
+
 /// Copies `text` into a fixed field, nul-terminated (cut to fit).
 fn fill(field: &mut [u8], text: &str) {
     let bytes = &text.as_bytes()[..text.len().min(field.len() - 1)];

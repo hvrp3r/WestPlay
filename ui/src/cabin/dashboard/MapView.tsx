@@ -6,6 +6,7 @@ import { DashboardMapControls, MapControls } from '../maps/MapControls'
 import { MapSearch } from '../maps/MapSearch'
 import { nextStop } from '../maps/nextStop'
 import { useMapData } from '../maps/mapData'
+import { ReportAlert } from '../maps/ReportAlert'
 import { RoadMap } from '../maps/RoadMap'
 import { useLive } from '../state/store'
 import { useText } from '../state/text'
@@ -68,6 +69,7 @@ export function MapView({ interactive = false }: { interactive?: boolean }) {
         {speed > 0 && <div className={`speed-badge${limit > 0 && speed > limit ? ' over' : ''}`}>{speed}</div>}
       </div>
       {interactive && <GuidanceCard variant="banner" />}
+      {data && <ReportAlert />}
       {data && interactive && <MapControls />}
       {data && !interactive && <DashboardMapControls />}
       {data && interactive && <MapSearch />}

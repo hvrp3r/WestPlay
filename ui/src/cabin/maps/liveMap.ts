@@ -51,11 +51,15 @@ import {
   OFFERED_SOURCE,
   PLAYERS_SOURCE,
   paintFor,
+  REPORTS_SOURCE,
   placeImagesFor,
   ROUTE_HEAD_SOURCE,
   ROUTE_SOURCE,
   TRAFFIC_SOURCE,
 } from './style'
+import { drawReportIcon, parseReportIcon } from './reportIcons'
+import type { Report } from './reports'
+import { updateReports, useReports } from './reportsStore'
 import { corridorOf, type TrafficStretch, trafficAlong } from './traffic'
 import { setMapView, setRouteAhead, useTruckersMp } from './truckersmp'
 import { type Area, type OtherPlayer, trackAt } from './truckersmpFeed'
@@ -144,6 +148,9 @@ interface LiveMap {
   ahead: Point[] | null
   aheadTold: number
   aheadShown: readonly OtherPlayer[] | null
+  /** WestPlay's reports: when they were last looked at, and the ones last drawn (`null`: draw them anew). */
+  reportsTold: number
+  reportsShown: readonly Report[] | null
   /** The following camera's damped bearing and zoom. */
   camera: { bearing: number; zoom: number } | null
   mode: Mode
@@ -320,6 +327,8 @@ function create(data: MapData, appearance: Appearance): LiveMap {
     ahead: null,
     aheadTold: 0,
     aheadShown: null,
+    reportsTold: 0,
+    reportsShown: null,
     camera: null,
     mode: 'follow',
     interactive: false,
@@ -338,6 +347,12 @@ function create(data: MapData, appearance: Appearance): LiveMap {
   // Place icons are drawn when the map first needs each (placeIcons.ts), and again once the type for their
   // names is in.
   map.on('styleimagemissing', ({ id }: { id: string }) => {
+    const report = parseReportIcon(id)
+    if (report) {
+      const pixelRatio = window.devicePixelRatio || 1
+      if (!map.hasImage(id)) map.addImage(id, drawReportIcon(report, pixelRatio), { pixelRatio })
+      return
+    }
     const icon = parsePlaceIcon(id)
     if (!icon || map.hasImage(id)) return
     const pixelRatio = window.devicePixelRatio || 1
@@ -616,6 +631,46 @@ function syncRouteTraffic(target: LiveMap, now: number) {
   }
 }
 
+/** How far ahead along the route driven (m) WestPlay's reports are looked for and made. */
+const REPORTS_AHEAD = 25000
+/** How often (ms) the reports are looked at again (reportsStore.ts). */
+const REPORTS_EVERY = 1000
+
+/** WestPlay's reports: looked at again every so often (on the route ahead while driving one), and drawn as
+ * they change. */
+function syncReports(target: LiveMap, now: number) {
+  if (now - target.reportsTold >= REPORTS_EVERY) {
+    target.reportsTold = now
+    const telemetry = useLive.getState().telemetry
+    if (telemetry && !telemetry.paused) {
+      const shown = target.routeShown
+      const progress = target.progress
+      let ahead: Point[] | null = null
+      if (!target.overview && shown?.route && progress) {
+        // From the truck on: the span it's on starts behind it.
+        const spans = [headLine(shown.spans, progress), ...shown.spans.slice(progress.span + 1)]
+        const line = routeAhead(spans, 0, REPORTS_AHEAD)
+        if (line.length > 1) ahead = line
+      }
+      updateReports(ahead, telemetry.gameTime)
+    }
+  }
+  const { reports } = useReports.getState()
+  if (reports === target.reportsShown) return
+  const source = target.map.getSource<GeoJSONSource>(REPORTS_SOURCE)
+  // The style still loading: next frame.
+  if (!source) return
+  target.reportsShown = reports
+  source.setData({
+    type: 'FeatureCollection',
+    features: reports.map((report) => ({
+      type: 'Feature',
+      properties: { kind: report.kind },
+      geometry: { type: 'Point', coordinates: toLngLat(report.x, report.z) },
+    })),
+  })
+}
+
 /** Shows the traffic on the route previewed (traffic.ts: TruckersMP's), over it; none to clear it. */
 export function showTraffic(stretches: readonly TrafficStretch[]) {
   const source = live?.map.getSource<GeoJSONSource>(TRAFFIC_SOURCE)
@@ -712,6 +767,7 @@ function place() {
       syncGarages(current)
       syncPlayers(current, now)
       syncRouteTraffic(current, now)
+      syncReports(current, now)
       syncRoute(current, now)
       syncCanopies(current, now)
       updateCamera(current, now, dt)

@@ -477,6 +477,28 @@ export const OFFERED_SOURCE = 'westplay-offered'
 export const TRAFFIC_SOURCE = 'westplay-traffic'
 /** TruckersMP's other players (truckersmp.ts): points. */
 export const PLAYERS_SOURCE = 'westplay-players'
+/** WestPlay's reports (reports.ts): points with their `kind`. */
+export const REPORTS_SOURCE = 'westplay-reports'
+
+/** WestPlay's reports: each kind's badge (reportIcons.ts, drawn as the map asks for `report-<kind>`), over the
+ * route and the other players, never hidden by the names. */
+function reportLayers(): LayerSpecification[] {
+  return [
+    {
+      id: 'reports',
+      type: 'symbol',
+      source: REPORTS_SOURCE,
+      layout: {
+        'icon-image': ['concat', 'report-', ['get', 'kind']],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.6, 13, 0.85, 16, 1],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-pitch-alignment': 'viewport',
+      },
+      paint: { 'icon-opacity': 1 },
+    },
+  ]
+}
 
 /** The traffic over the route previewed: yellow where it's slow, red where it's jammed, as Apple's. The
  * same colours in light and dark. */
@@ -652,6 +674,7 @@ export function mapStyle(appearance: Appearance, data: MapData | null): StyleSpe
           [OFFERED_SOURCE]: { type: 'geojson', data: NO_LINE },
           [TRAFFIC_SOURCE]: { type: 'geojson', data: NO_LINE },
           [PLAYERS_SOURCE]: { type: 'geojson', data: NO_LINE },
+          [REPORTS_SOURCE]: { type: 'geojson', data: NO_LINE },
         }
       : {},
     layers: [
@@ -687,7 +710,7 @@ export function mapStyle(appearance: Appearance, data: MapData | null): StyleSpe
       ...routeLayers(palette, 0),
       // Each raised level's roads over everything on the levels below, and the route on them over those.
       ...raised.flatMap((level, index) => [...level, ...routeLayers(palette, index + 1)]),
-      ...(data ? [...offeredLayers(palette), ...trafficLayers(), ...playerLayers()] : []),
+      ...(data ? [...offeredLayers(palette), ...trafficLayers(), ...playerLayers(), ...reportLayers()] : []),
       signLayer(),
       ...placeLayers(),
     ],
@@ -705,6 +728,7 @@ export function paintFor(appearance: Appearance): { layer: string; property: str
     ...offeredLayers(palette),
     ...trafficLayers(),
     ...playerLayers(),
+    ...reportLayers(),
   ]
   return layers.flatMap((layer) =>
     Object.entries(('paint' in layer ? layer.paint : undefined) ?? {}).map(([property, value]) => ({
