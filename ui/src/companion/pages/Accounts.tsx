@@ -11,6 +11,8 @@ import {
   appleMusicSignOut,
   spotifySignIn,
   spotifySignOut,
+  tiktokSignIn,
+  tiktokSignOut,
   youtubeSignIn,
   youtubeSignOut,
 } from '../useHostStatus'
@@ -57,9 +59,28 @@ const SERVICES: Record<
     signingIn: (status) => status?.appleMusicSigningIn ?? false,
     words: (words) => words.appleMusic,
   },
+  // WestPlay's: its words in French or English only (the onboarding's other languages don't have it).
+  tiktok: {
+    name: 'TikTok',
+    app: 'tiktok',
+    glow: GLOW.tiktok,
+    signIn: tiktokSignIn,
+    signOut: tiktokSignOut,
+    signingIn: (status) => status?.tiktokSigningIn ?? false,
+    words: (words) =>
+      words.locale.startsWith('fr')
+        ? {
+            finishInWindow: 'Terminez la connexion dans la fenêtre TikTok',
+            signingIn: { title: 'Connexion à TikTok', text: 'Continuez dans la fenêtre TikTok' },
+          }
+        : {
+            finishInWindow: 'Finish signing in in the TikTok window',
+            signingIn: { title: 'Signing in to TikTok', text: 'Continue in the TikTok window' },
+          },
+  },
 }
 
-const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic']
+const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic', 'tiktok']
 
 /**
  * The services WestPlay plays from, each signed in (in its own window, on the desktop) or not. WestPlay only

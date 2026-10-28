@@ -27,6 +27,7 @@ import {
   receivePlayback,
   receiveState as receiveSpotifyState,
 } from '../apps/spotify/spotify'
+import { receiveTikTok } from '../apps/tiktok/tiktok'
 import { receiveAnswer, receiveState, useYouTube } from '../apps/youtube/youtube'
 import {
   receiveAnswer as receiveYouTubeMusicAnswer,
@@ -516,6 +517,14 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         break
       case 'youtubeSignIn':
         useYouTube.setState({ signingIn: message.open })
+        break
+      case 'tiktok':
+        receiveTikTok(message.state, message.signingIn)
+        break
+        break
+        break
+        break
+        break
         break
       case 'map':
         receiveMapFolder(message.folder, message.built)

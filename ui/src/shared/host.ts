@@ -186,6 +186,8 @@ export type HostMessage =
   | { type: 'youtubeAccount'; signedIn: boolean; avatar: string | null }
   /** Whether Google's sign-in window is open on the PC's desktop. */
   | { type: 'youtubeSignIn'; open: boolean }
+  /** WestPlay's TikTok: what plays (`null`: TikTok isn't running), and whether its sign-in is under way. */
+  | { type: 'tiktok'; state: TikTokState | null; signingIn: boolean }
   /** The map the cab shows: its folder in WestPlay's maps (served at `https://westplay.maps/`), and when it
    * was built; `null` for none (none built yet). */
   | { type: 'map'; folder: string | null; built: number | null }
@@ -303,6 +305,8 @@ export type PageMessage =
   | { type: 'appleMusic'; command: AppleMusicCommand }
   /** A command for YouTube Music's web player (`westplay_host::youtube_music::Command`). */
   | { type: 'youtubeMusic'; command: YouTubeMusicCommand }
+  /** A command for WestPlay's TikTok (`westplay_host::tiktok::Command`). */
+  | { type: 'tiktok'; command: TikTokCommand }
 
 /** What the Spotify app asks of Spotify's web player (`westplay_host::spotify::Command`), run hidden by the
  * host: its sign-in, a question (answered with `spotifyAnswer` and the same `id`), and the player's controls
@@ -834,6 +838,41 @@ export interface YouTubeMusicPlayback {
   from: string
   ad: boolean
 }
+
+/** What WestPlay's TikTok plays, as its hidden page says (`westplay_host::tiktok::State`). */
+export interface TikTokState {
+  /** The page has its feed, or its sign-in button. */
+  loaded: boolean
+  signedIn: boolean
+  video: string | null
+  author: string
+  handle: string
+  avatar: string | null
+  description: string
+  music: string
+  /** TikTok's own counts ("12.3K"). */
+  likes: string
+  comments: string
+  liked: boolean | null
+  playing: boolean
+  time: number
+  duration: number
+}
+
+/** What WestPlay's TikTok app asks of TikTok's page (`westplay_host::tiktok::Command`): `show` places it, in the
+ * frame's pixels, where the app cuts the page open. */
+export type TikTokCommand =
+  | { action: 'play' | 'pause' | 'next' | 'previous' | 'like' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'volume'; percent: number }
+  | { action: 'show'; x: number; y: number; width: number; height: number }
+  | { action: 'play' | 'pause' | 'acceptGate' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'watch'; channel: string }
+  | { action: 'volume'; percent: number }
+  | { action: 'show'; x: number; y: number; width: number; height: number }
+  | { action: 'home' | 'more' | 'play' | 'pause' | 'hide' | 'close' | 'signIn' | 'signOut' }
+  | { action: 'like' | 'watch' | 'thread'; id: string }
+  | { action: 'volume'; percent: number }
+  | { action: 'show'; x: number; y: number; width: number; height: number }
 
 /** What the YouTube app asks of YouTube's player (hidden, under the page) or of YouTube (`westplay_host::
  * youtube::Command`). `show` places the video, in the frame's pixels. */
