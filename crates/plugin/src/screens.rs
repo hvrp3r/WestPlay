@@ -101,6 +101,10 @@ static ON_SUPPORTED_TRUCK: AtomicBool = AtomicBool::new(false);
 /// tablet is drawn beside the truck's own screen, which isn't WestPlay's there: the truck is WestPlay's while
 /// either was drawn lately, not by whichever was drawn last.
 static SUPPORTED_DRAWN: AtomicU64 = AtomicU64::new(0);
+/// The frame the truck's own screen, WestPlay's, was last drawn in (0: none since the truck changed). With the
+/// tablet fitted too in such a truck, both are drawn: the app is told the truck's own, not each in turn
+/// (2026-10-27: a Renault T with the tablet, the page laid out 720 then 879 rows high every few seconds, jumping).
+static OWN_SCREEN_DRAWN: AtomicU64 = AtomicU64::new(0);
 /// Whether the log has said this truck's screen isn't WestPlay's (once a truck: `truck_changed`).
 static UNSUPPORTED_SAID: AtomicBool = AtomicBool::new(false);
 /// Whether the log has said the cab's mark is drawn in this truck (once a truck: `truck_changed`): so whether the
@@ -182,6 +186,7 @@ pub fn truck_changed(id: &str) {
         TABLET_BLANK.store(blank, Ordering::Release);
     }
     SUPPORTED_DRAWN.store(0, Ordering::Release);
+    OWN_SCREEN_DRAWN.store(0, Ordering::Release);
     UNSUPPORTED_SAID.store(false, Ordering::Release);
     CAB_MARK_SAID.store(false, Ordering::Release);
     OTHER_TARGET_SAID.store(false, Ordering::Release);
@@ -398,6 +403,9 @@ unsafe fn refresh(context: &ID3D11DeviceContext, texture: ID3D11Texture2D, heigh
         let lately = drawn_lately(SUPPORTED_DRAWN.load(Ordering::Acquire), frame);
         if here {
             SUPPORTED_DRAWN.store(frame.max(1), Ordering::Release);
+            if !tablet {
+                OWN_SCREEN_DRAWN.store(frame.max(1), Ordering::Release);
+            }
         }
         // WestPlay's truck while one of its screens was drawn lately (the tablet, beside the truck's own).
         let supported = here || lately;
@@ -448,9 +456,12 @@ unsafe fn refresh(context: &ID3D11DeviceContext, texture: ID3D11Texture2D, heigh
             }
         }
 
-        // The screen WestPlay is on, said for the app (not the truck's own beside the tablet).
+        // The screen WestPlay is on, said for the app (not the truck's own beside the tablet; nor the tablet beside
+        // the truck's own when that one is WestPlay's too).
+        let beside_own = tablet && drawn_lately(OWN_SCREEN_DRAWN.load(Ordering::Acquire), frame);
         if let Some(bridge) = bridge::get()
             && (here || !lately)
+            && !beside_own
         {
             let plugin = &bridge.plugin;
             let published = layout as u32 + 1;
