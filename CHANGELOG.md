@@ -3,7 +3,7 @@
 What changed in each release of WestPlay. The newest release's notes are what the app shows when it offers the
 update.
 
-## 2.1.4 (2026-10-29)
+## 3.0.0 (2026-10-29)
 - The first release of this fork of WestPlay (hvrp3r/WestPlay). Installed over the official WestPlay, it takes
   its place and keeps your settings, sign-ins and maps; its plugin and mod go into the game the next time the
   companion opens with the game closed.
