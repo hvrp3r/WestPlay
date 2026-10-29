@@ -3,6 +3,27 @@
 What changed in each release of WestPlay. The newest release's notes are what the app shows when it offers the
 update.
 
+## 2.1.4 (2026-10-29)
+- The first release of this fork of WestPlay (hvrp3r/WestPlay). Installed over the official WestPlay, it takes
+  its place and keeps your settings, sign-ins and maps; its plugin and mod go into the game the next time the
+  companion opens with the game closed.
+- **Twitch** on the truck's screen: the channels live (the ones you follow, or the most watched), and a stream
+  full screen with its title, game and viewers and a 0-100 volume. It plays on, heard, once you leave the app,
+  and pauses with the game.
+- **X** on the truck's screen: your timeline (For you and Following), each post with its pictures, counts and
+  like, quoted posts, a reply's conversation, and videos full screen.
+- **TikTok** on the truck's screen: the For You feed, the video upright with its author, text and sound, like,
+  next and previous (with the wheel too), and a 0-100 volume.
+- Twitch, X and TikTok are signed in to on their own pages, from the app or the companion's Accounts page, each
+  in a browser profile of its own: signing out of one forgets nothing else.
+- **Waze-like reports** on the map and along the route, with an alert card and a chime for the next one: the
+  police cars and tow trucks of the game's traffic (not under TruckersMP), your own fines where they were given,
+  and speed cameras, accidents, roadworks, closed roads and hazards from a simulated community, so a player
+  driving alone gets them too.
+- With the tablet fitted in a truck whose own screen is WestPlay's too (a Renault T 2024, say), the page no
+  longer jumps between the two screens' sizes every few seconds.
+- WestPlay is updated from this fork's releases only: an official update can no longer replace it.
+
 ## 2.1.3 (2026-10-27)
 - The WestPlay tablet has a new look: a slim aluminium tablet with a black glass front, at a real tablet's size
   (24.8 x 17.9 cm), WestPlay laid out in the shape of its screen. The tablet's model is Art_bor's (Sketchfab,

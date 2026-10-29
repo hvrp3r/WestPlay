@@ -521,8 +521,9 @@ fn install_plugin(game: &Game, ours: &Path, administrator: bool) -> PluginOutcom
     }
 }
 
-/// This WestPlay's version.
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// This WestPlay's version, marked as this fork's (hvrp3r/WestPlay): switching from the official WestPlay of the
+/// same version is an update too, so the fork's plugin and mod replace the official ones in the game.
+const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "-hvrp3r");
 
 /// Whether this WestPlay is another version than the one that put its plugin and mod into the game
 /// (`installed_by`; none: one from before versions were kept). Never in a development build.

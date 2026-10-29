@@ -1,0 +1,143 @@
+# WestPlay's Windows installer, built on GitHub: the game plugin (westplay.dll), then the companion app and its
+# NSIS installer (tauri.release.conf.json), which bundles the plugin. The game mod (westplay.scs) isn't built
+# here: the companion builds it on the player's PC, from their own game.
+#
+# - A push to main or a pull request: built and tested, the installer kept as the run's artifact.
+# - A tag `vX.Y.Z` (the workspace's version, Cargo.toml): the same, then published as a GitHub release, its notes
+#   the changelog's for that version, with the updater's files: the installer's signature (made with the fork's
+#   private key, the TAURI_SIGNING_PRIVATE_KEY secret) and `latest.json`, which the installed apps look for
+#   (tauri.conf.json's updater endpoint) to offer the update. The README's download link points to the latest one.
+#
+# Without the key (a pull request from another fork, which gets no secrets), the installer is built unsigned,
+# without the updater's files.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          "version=$version" >> $env:GITHUB_OUTPUT
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            Write-Error "The tag $env:GITHUB_REF_NAME isn't the workspace's version (v$version, Cargo.toml)"
+            exit 1
+          }
+
+      # The root's postinstall installs the UI's packages too.
+      - name: Install packages
+        run: npm ci
+
+      - name: Test
+        run: |
+          cargo test --workspace --release
+          npm --prefix ui test
+
+      - name: Build the plugin
+        run: cargo build --release -p westplay-plugin
+
+      # `tauri build` directly: the root's `npm run build` first runs a local clean-up script that isn't in the
+      # repository.
+      - name: Build the app and its installer
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ($env:TAURI_SIGNING_PRIVATE_KEY) {
+            npx tauri build --config app/tauri.release.conf.json
+          } elseif ($env:GITHUB_REF_TYPE -eq 'tag') {
+            Write-Error "A release needs the TAURI_SIGNING_PRIVATE_KEY secret: the installed apps take only signed updates"
+            exit 1
+          } else {
+            Write-Warning "No TAURI_SIGNING_PRIVATE_KEY: the installer is built without the updater's files"
+            '{"bundle":{"createUpdaterArtifacts":false}}' | Out-File unsigned.conf.json -Encoding utf8NoBOM
+            npx tauri build --config app/tauri.release.conf.json --config unsigned.conf.json
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $lines = Get-Content CHANGELOG.md -Encoding utf8
+          $notes = @()
+          $in = $false
+          foreach ($line in $lines) {
+            if ($line -match '^## ') {
+              if ($in) { break }
+              $in = $line -match "^## $([regex]::Escape($version))( |$)"
+              continue
+            }
+            if ($in) { $notes += $line }
+          }
+          $notes -join "`n" | Out-File release-notes.md -Encoding utf8
+
+      # What the installed apps read to offer the update (Tauri's static updater JSON).
+      - name: Updater manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $installer = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          $signature = Get-Content "$($installer.FullName).sig" -Raw
+          $manifest = [ordered]@{
+            version = $version
+            notes = (Get-Content release-notes.md -Raw -Encoding utf8).Trim()
+            pub_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = @{
+              'windows-x86_64' = @{
+                signature = $signature.Trim()
+                url = "https://github.com/${{ github.repository }}/releases/download/v$version/$($installer.Name)"
+              }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Out-File latest.json -Encoding utf8NoBOM
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WestPlay-${{ steps.version.outputs.version }}-setup
+          path: target/release/bundle/nsis/*.exe
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: WestPlay ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          files: |
+            target/release/bundle/nsis/*-setup.exe
+            target/release/bundle/nsis/*-setup.exe.sig
+            latest.json

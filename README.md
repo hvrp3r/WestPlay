@@ -8,7 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/enes-less/WestPlay/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/download-for%20Windows-409c42?style=for-the-badge"></a>
+  <a href="https://github.com/hvrp3r/WestPlay/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/download-for%20Windows-409c42?style=for-the-badge"></a>
+  <a href="https://github.com/hvrp3r/WestPlay/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/hvrp3r/WestPlay/build.yml?branch=main&style=for-the-badge"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-2b2b2b?style=for-the-badge">
   <img alt="Euro Truck Simulator 2 1.61" src="https://img.shields.io/badge/ETS2-1.61-2b2b2b?style=for-the-badge">
   <a href="LICENSE"><img alt="Licence: GPL-3.0-or-later" src="https://img.shields.io/badge/licence-GPL--3.0-2b2b2b?style=for-the-badge"></a>
@@ -23,6 +24,11 @@
 </p>
 
 <br>
+
+> [!NOTE]
+> This is a fork of [enes-less/WestPlay](https://github.com/enes-less/WestPlay) that adds **Twitch**, **X** and
+> **TikTok** to the truck's screen and fixes the tablet jumping. It updates itself from this fork's
+> [releases](https://github.com/hvrp3r/WestPlay/releases/latest) only, never from the official WestPlay's.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/home-dark.png">
@@ -150,12 +156,20 @@ Music plays from the truck's own speakers, each where it sits in the cab. Other 
 
 ## Install
 
-1. Download the installer from the [latest release](https://github.com/enes-less/WestPlay/releases/latest) and run it.
+1. Download the installer (`WestPlay_…_x64-setup.exe`) from the [latest release](https://github.com/hvrp3r/WestPlay/releases/latest) and run it.
+   If the official WestPlay is installed, close it first: this one takes its place, keeps your settings, sign-ins
+   and maps, and puts its own plugin and mod in the game the next time the companion opens with the game closed.
 2. The companion opens and walks you through the rest: it finds your game, installs WestPlay's plugin and its
    screens mod, and builds your map.
 3. Start the game and get in a truck.
 
-WestPlay looks for updates on its own and asks before installing one.
+WestPlay looks for updates on its own (this fork's releases) and asks before installing one.
+
+> [!WARNING]
+> **Windows may say "Windows protected your PC"** when you run the installer: it isn't signed with a paid
+> code-signing certificate, so SmartScreen doesn't know it yet. Click **More info**, then **Run anyway**. Your
+> browser may also warn about the download: keep it. The installer is built from this repository's code by
+> [GitHub Actions](https://github.com/hvrp3r/WestPlay/actions/workflows/build.yml), and you can check it there.
 
 **Requirements:** Windows 10 or 11 (64-bit), Euro Truck Simulator 2 version 1.61 (other versions may work; the
 companion says when one is untested), and Microsoft Edge WebView2 (part of Windows 11; the installer adds it
@@ -192,6 +206,12 @@ npm run dev      # WestPlay, with the UI served live
 
 `cargo test --workspace` and `npm test --prefix ui` run the tests. The game plugin is built with
 `cargo build --release -p westplay-plugin`.
+
+GitHub Actions ([build.yml](.github/workflows/build.yml)) builds the installer on every push. To release, set the
+same version in `Cargo.toml`, `app/tauri.conf.json` and `ui/package.json`, give it its section in `CHANGELOG.md`,
+then push a tag `vX.Y.Z`: the installer is published as a release, with that section as its notes, signed for
+the updater (the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets). Each release's
+version must be higher than the last for installed apps to offer it.
 
 </details>
 

@@ -10,6 +10,10 @@
 //! them in (setup's `updated`).
 //!
 //! A development build is never updated: it looks for nothing.
+//!
+//! This fork (hvrp3r/WestPlay, with Twitch, X and TikTok) is updated from its own releases only, never from the
+//! official WestPlay's: the endpoint is the fork's, and the key the fork's own, so an official release, signed
+//! with another key, couldn't be installed over it.
 
 use std::sync::Mutex;
 use std::time::Duration;
