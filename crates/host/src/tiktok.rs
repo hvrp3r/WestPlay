@@ -345,11 +345,13 @@ impl TikTok {
 }
 
 /// The commands for TikTok's page, as JSON: held until it says it's there; a page that loads again gets the
-/// volume and the cab's sound again.
+/// volume, the cab's sound, and whether it plays or is paused again (it starts paused: loaded again with the app
+/// closed, once signed in, it stays paused).
 #[derive(Default)]
 struct Outbox {
     ready: bool,
     held: Vec<String>,
+    playing: Option<String>,
     volume: Option<String>,
     speakers: Option<String>,
     head: Option<String>,
@@ -363,6 +365,7 @@ impl Outbox {
     fn send(&mut self, command: &Command) -> Option<String> {
         let message = serde_json::to_string(command).expect("commands serialise");
         match command {
+            Command::Play | Command::Pause => self.playing = Some(message.clone()),
             Command::Volume { .. } => self.volume = Some(message.clone()),
             Command::Speakers { .. } => self.speakers = Some(message.clone()),
             Command::Head { .. } => self.head = Some(message.clone()),
@@ -385,6 +388,7 @@ impl Outbox {
             [&self.volume, &self.speakers, &self.head, &self.outside, &self.equalizer, &self.spectrum]
                 .into_iter()
                 .flatten()
+                .chain(&self.playing)
                 .cloned()
                 .collect()
         } else {
@@ -447,6 +451,19 @@ mod tests {
         assert_eq!(outbox.send(&Command::Next), None);
         assert_eq!(outbox.ready(), [r#"{"action":"volume","percent":40}"#, r#"{"action":"next"}"#]);
         assert!(outbox.send(&Command::Play).is_some());
-        assert_eq!(outbox.ready(), [r#"{"action":"volume","percent":40}"#]);
+        assert_eq!(outbox.ready(), [r#"{"action":"volume","percent":40}"#, r#"{"action":"play"}"#]);
+    }
+
+    /// The app closed (paused) as TikTok's page loads again (signed in in its window): the page, which starts
+    /// paused, is told to stay so, not left to play its feed hidden.
+    #[test]
+    fn keeps_a_reloaded_page_paused() {
+        let mut outbox = Outbox::default();
+        assert_eq!(outbox.send(&Command::Play), None);
+        assert_eq!(outbox.ready(), [r#"{"action":"play"}"#]);
+        assert!(outbox.send(&Command::Pause).is_some());
+        assert_eq!(outbox.ready(), [r#"{"action":"pause"}"#]);
+        assert!(outbox.send(&Command::Next).is_some());
+        assert_eq!(outbox.ready(), [r#"{"action":"pause"}"#], "only play or pause is told again");
     }
 }

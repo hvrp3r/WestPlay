@@ -14,16 +14,16 @@
 .tiktok-message,
 .tiktok-sign-in {
   margin: auto;
-  max-width: 520px;
+  max-width: 620px;
   padding: 24px;
   text-align: center;
-  font-size: 20px;
+  font-size: 24px;
   color: rgb(255 255 255 / 0.8);
 }
 
 .tiktok-sign-in h2 {
   margin: 16px 0 8px;
-  font-size: 30px;
+  font-size: 36px;
   color: #fff;
 }
 
@@ -32,17 +32,17 @@
 }
 
 .tiktok-note {
-  width: 96px;
-  height: 96px;
+  width: 112px;
+  height: 112px;
 }
 
 .tiktok-app .tiktok-button {
   margin-top: 12px;
-  padding: 14px 36px;
+  padding: 18px 44px;
   border-radius: 999px;
   background: #fe2c55;
   color: #fff;
-  font-size: 22px;
+  font-size: 27px;
   font-weight: 600;
 }
 
@@ -89,21 +89,21 @@
 .tiktok-author {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 22px;
+  gap: 14px;
+  font-size: 27px;
   font-weight: 700;
 }
 
 .tiktok-author img {
-  width: 52px;
-  height: 52px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .tiktok-description {
   margin: 0;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 5;
@@ -112,7 +112,7 @@
 }
 
 .tiktok-music {
-  font-size: 16px;
+  font-size: 19px;
   color: rgb(255 255 255 / 0.75);
   white-space: nowrap;
   overflow: hidden;
@@ -129,7 +129,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 16px;
 }
 
 .tiktok-feed .tiktok-action {
@@ -139,14 +139,14 @@
   gap: 4px;
   background: transparent;
   color: #fff;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
 }
 
 .tiktok-feed .tiktok-action svg {
-  width: 58px;
-  height: 58px;
-  padding: 13px;
+  width: 70px;
+  height: 70px;
+  padding: 16px;
   box-sizing: border-box;
   border-radius: 50%;
   background: rgb(255 255 255 / 0.14);
@@ -174,7 +174,7 @@
   margin-top: 12px;
   background: transparent;
   color: rgb(255 255 255 / 0.55);
-  font-size: 14px;
+  font-size: 17px;
 }
 
 .tiktok-progress {
@@ -194,23 +194,23 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 600;
 }
 
 .tiktok-volume input[type='range'] {
   appearance: none;
-  width: min(140px, calc(var(--bar) - 32px));
-  height: 6px;
-  border-radius: 3px;
+  width: min(170px, calc(var(--bar) - 32px));
+  height: 8px;
+  border-radius: 4px;
   background: linear-gradient(90deg, #fff var(--level), rgb(255 255 255 / 0.25) var(--level));
   cursor: pointer;
 }
 
 .tiktok-volume input[type='range']::-webkit-slider-thumb {
   appearance: none;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);

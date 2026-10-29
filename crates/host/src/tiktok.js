@@ -78,10 +78,30 @@
   const text = (root, selector) => (root?.querySelector(selector)?.textContent ?? '').trim()
 
   // What the player asked for: playing or paused (a video coming next plays; paused, it stays paused), and the
-  // volume (0 to 1), held to as TikTok's player sets its own.
-  let wanted = 'play'
+  // volume (0 to 1), held to as TikTok's player sets its own. Paused until asked to play: a page loaded with the
+  // app closed (opened only for the sign-in, or again once signed in) plays nothing, hidden; the app asks for
+  // play as it opens, and the host tells a page loaded again what was asked last (tiktok.rs).
+  let wanted = 'pause'
   let volume = 0.8
   let liked = null
+
+  // Every video of the page but the copy shown (TikTok's feed has a video for each of its videos near the one
+  // playing, and the one playing isn't always the one found playing a moment later, as the feed moves).
+  const videos = () => [...document.querySelectorAll('video')].filter((video) => video !== mirror)
+  const pauseAll = () => {
+    for (const video of videos()) if (!video.paused) video.pause()
+  }
+  // Paused, a video of the feed that starts playing (TikTok's own, as its feed moves to the next) is paused as
+  // it starts, not at the next pass.
+  document.addEventListener(
+    'play',
+    (event) => {
+      if (wanted === 'pause' && event.target instanceof HTMLVideoElement && event.target !== mirror) {
+        event.target.pause()
+      }
+    },
+    true,
+  )
 
   // To the next video or back: the feed's own arrows, or, while they can't be pressed, the video brought up.
   const move = (step) => {
@@ -108,7 +128,7 @@
         break
       case 'pause':
         wanted = 'pause'
-        video?.pause()
+        pauseAll()
         break
       case 'next':
         move(1)
@@ -203,7 +223,10 @@
       if (Math.abs(video.volume - volume) > 0.01) video.volume = volume
       if (video.muted !== (volume === 0)) video.muted = volume === 0
       if (wanted === 'play' && video.paused && video.readyState >= 2) video.play().catch(() => {})
-      if (wanted === 'pause' && !video.paused) video.pause()
+    }
+    // Only the video shown is heard, and none while paused.
+    for (const other of videos()) {
+      if (!other.paused && (wanted === 'pause' || other !== video)) other.pause()
     }
     cab?.tick()
 
