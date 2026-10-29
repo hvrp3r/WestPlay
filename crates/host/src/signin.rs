@@ -19,13 +19,14 @@ use std::time::{Duration, Instant};
 
 use webview2_com::Microsoft::Web::WebView2::Win32::{
     COREWEBVIEW2_MOUSE_EVENT_KIND, COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS, COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC,
-    ICoreWebView2, ICoreWebView2CompositionController, ICoreWebView2Controller, ICoreWebView2Environment,
-    ICoreWebView2Environment3,
+    ICoreWebView2, ICoreWebView2_8, ICoreWebView2CompositionController, ICoreWebView2Controller,
+    ICoreWebView2Environment, ICoreWebView2Environment3,
 };
 use webview2_com::{
     AddScriptToExecuteOnDocumentCreatedCompletedHandler, CoTaskMemPWSTR,
     CreateCoreWebView2CompositionControllerCompletedHandler, CursorChangedEventHandler,
-    NavigationCompletedEventHandler, WebMessageReceivedEventHandler, WindowCloseRequestedEventHandler,
+    NavigationCompletedEventHandler, SourceChangedEventHandler, WebMessageReceivedEventHandler,
+    WindowCloseRequestedEventHandler,
 };
 use windows::UI::Composition::{Compositor, ContainerVisual, Desktop::DesktopWindowTarget};
 use windows::Win32::Foundation::{E_POINTER, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
@@ -38,24 +39,26 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetSystemMetrics, HCURSOR, HTCLIENT,
     IDC_ARROW, IsWindow, LoadCursorW, RegisterClassW, SM_CXSCREEN, SM_CYSCREEN, SW_SHOW, SetCursor,
-    SetForegroundWindow, ShowWindow, WINDOW_EX_STYLE, WM_ACTIVATE, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
-    WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETCURSOR, WM_SETFOCUS,
-    WM_SIZE, WM_XBUTTONDOWN, WM_XBUTTONUP, WNDCLASSW, WS_OVERLAPPEDWINDOW,
+    SetForegroundWindow, ShowWindow, WINDOW_EX_STYLE, WM_ACTIVATE, WM_CLOSE, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP,
+    WM_SETCURSOR, WM_SETFOCUS, WM_SIZE, WM_XBUTTONDOWN, WM_XBUTTONUP, WNDCLASSW, WS_OVERLAPPEDWINDOW,
 };
-use windows::core::{HSTRING, Interface, PWSTR, w};
+use windows::core::{BOOL, HSTRING, Interface, PWSTR, w};
 use windows_numerics::Vector2;
 
 use crate::webview;
 
 /// A service to sign in to: its sign-in page, the window's title, and its own pages, where the sign-in comes
 /// back to once done (but for `not_yet`, its own steps on the way, if any). A service whose sign-in stays
-/// on one page has a script in it instead (`page_says`), which posts `{"signedIn":true}` once it is.
+/// on one page has a script in it instead (`page_says`), which posts `{"signedIn":true}` once it is. A
+/// service whose page plays as soon as it's back (TikTok's feed) is `muted`: nothing of it is heard.
 pub struct Site {
     pub sign_in: &'static str,
     pub title: &'static str,
     pub home: &'static str,
     pub not_yet: &'static [&'static str],
     pub page_says: Option<&'static str>,
+    pub muted: bool,
 }
 
 /// Google's sign-in for YouTube, coming back to YouTube once signed in (through YouTube's own `/signin`, which
@@ -66,6 +69,7 @@ pub const YOUTUBE: Site = Site {
     home: "https://www.youtube.com/",
     not_yet: &["signin"],
     page_says: None,
+    muted: false,
 };
 
 /// Google's sign-in for YouTube Music: YouTube's own (YouTube Music shares YouTube's sign-in: its cookies are
@@ -79,6 +83,7 @@ pub const SPOTIFY: Site = Site {
     home: "https://open.spotify.com/",
     not_yet: &[],
     page_says: None,
+    muted: false,
 };
 
 /// Spotify's sign-up, coming back to its web player signed in to the new account.
@@ -88,6 +93,7 @@ pub const SPOTIFY_SIGN_UP: Site = Site {
     home: "https://open.spotify.com/",
     not_yet: &[],
     page_says: None,
+    muted: false,
 };
 
 /// Apple Music's sign-in: the dialog of its own web player, opened at once (`apple_music_sign_in.js`).
@@ -97,16 +103,18 @@ pub const APPLE_MUSIC: Site = Site {
     home: "https://music.apple.com/",
     not_yet: &[],
     page_says: Some(include_str!("apple_music_sign_in.js")),
+    muted: false,
 };
 
 /// TikTok's sign-in (WestPlay's), coming back to its For You feed: TikTok's own pages until then are its sign-in
-/// and sign-up steps.
+/// and sign-up steps. The feed plays as it comes, for the moment until the window closes: muted.
 pub const TIKTOK: Site = Site {
     sign_in: "https://www.tiktok.com/login?redirect_url=https%3A%2F%2Fwww.tiktok.com%2Fforyou",
     title: "Sign in to TikTok - WestPlay",
     home: "https://www.tiktok.com/",
     not_yet: &["login", "signup"],
     page_says: None,
+    muted: true,
 };
 
 /// Twitch's sign-in (WestPlay's), coming back to Twitch: its own pages until then are its sign-in and sign-up.
@@ -116,6 +124,7 @@ pub const TWITCH: Site = Site {
     home: "https://www.twitch.tv/",
     not_yet: &["login", "signup", "passport"],
     page_says: None,
+    muted: false,
 };
 
 /// X's sign-in (WestPlay's), done once X is on the player's timeline (its sign-in's own steps are elsewhere on
@@ -126,6 +135,7 @@ pub const X: Site = Site {
     home: "https://x.com/home",
     not_yet: &[],
     page_says: None,
+    muted: false,
 };
 
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
@@ -311,6 +321,31 @@ impl SignInWindow {
         let mut token = 0;
         // SAFETY: the handler and the token are locals for the call; WebView2 keeps its own reference to the handler.
         unsafe { webview.add_NavigationCompleted(&handler, &mut token)? };
+        // And a loaded page that moves to another address of its own without loading (TikTok's, signed in, goes to
+        // its feed so): that address.
+        let noted = loaded.clone();
+        let handler = SourceChangedEventHandler::create(Box::new(move |webview, args| {
+            if let (Some(webview), Some(args)) = (webview, args) {
+                let mut new_document = BOOL::default();
+                let mut source = PWSTR::null();
+                // SAFETY: WebView2 writes a plain value into `new_document` and a CoTaskMem string into `source`,
+                // freed by `CoTaskMemPWSTR`.
+                if unsafe { args.IsNewDocument(&mut new_document) }.is_ok()
+                    && !new_document.as_bool()
+                    && unsafe { webview.Source(&mut source) }.is_ok()
+                {
+                    *noted.borrow_mut() = webview2_com::CoTaskMemPWSTR::from(source).to_string();
+                }
+            }
+            Ok(())
+        }));
+        let mut token = 0;
+        // SAFETY: the handler and the token are locals for the call; WebView2 keeps its own reference to the handler.
+        unsafe { webview.add_SourceChanged(&handler, &mut token)? };
+        if site.muted {
+            // SAFETY: the WebView was just created; a plain value.
+            unsafe { webview.cast::<ICoreWebView2_8>()?.SetIsMuted(true)? };
+        }
 
         // A site whose page says it's signed in: its script, and what it says.
         let said = Rc::new(Cell::new(false));
@@ -465,7 +500,15 @@ unsafe extern "system" fn window_proc(window: HWND, message: u32, wparam: WPARAM
             unsafe { pass_mouse(window, &hosted, message, wparam, lparam) };
             LRESULT(0)
         }
-        // Closing it destroys it: the sign-in sees it gone.
+        // Closing it closes its WebView there and then (its page stops: a feed it came back to plays no more,
+        // not even until the sign-in sees the window gone) and destroys it: the sign-in sees it gone.
+        WM_CLOSE => {
+            // SAFETY: `hosted` is this window's WebView, closed on the thread that made it (again as it's dropped:
+            // nothing then).
+            let _ = unsafe { hosted.controller.Close() };
+            // SAFETY: Windows' own handling of a message to this window, its arguments as they came.
+            unsafe { DefWindowProcW(window, message, wparam, lparam) }
+        }
         // SAFETY: Windows' own handling of a message to this window, its arguments as they came.
         _ => unsafe { DefWindowProcW(window, message, wparam, lparam) },
     }
@@ -595,6 +638,8 @@ mod tests {
         assert_eq!(progress_at(&TIKTOK, "https://www.tiktok.com/signup"), Progress::Signing);
         assert_eq!(progress_at(&TIKTOK, "https://www.tiktok.com/foryou?lang=fr"), Progress::SignedIn);
         assert_eq!(progress_at(&TIKTOK, "https://evil.example/?https://www.tiktok.com/"), Progress::Signing);
+        // Its feed plays as it comes back to it: not heard from the window.
+        assert!(TIKTOK.muted && !YOUTUBE.muted);
     }
 
     #[test]

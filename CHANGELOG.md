@@ -3,6 +3,14 @@
 What changed in each release of WestPlay. The newest release's notes are what the app shows when it offers the
 update.
 
+## 3.0.1 (2026-10-29)
+- TikTok stops when you leave its app for another on the truck's screen: a video of the feed could play on,
+  heard, most often as the feed moved to the next one.
+- Signing in to TikTok no longer leaves its feed playing in the background: TikTok's page, opened for the sign-in
+  (from the companion's Accounts page too) or again once signed in, now waits paused until its app plays it, and
+  closing the sign-in window stops its page at once.
+- TikTok's texts and buttons are larger, easier to read and press on the truck's screen.
+
 ## 3.0.0 (2026-10-29)
 - The first release of this fork of WestPlay (hvrp3r/WestPlay). Installed over the official WestPlay, it takes
   its place and keeps your settings, sign-ins and maps; its plugin and mod go into the game the next time the
